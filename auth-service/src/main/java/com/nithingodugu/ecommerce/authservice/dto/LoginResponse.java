@@ -9,5 +9,8 @@ public record LoginResponse(
         UUID id,
         String email,
         UserRole role,
-        UserStatus status
+        UserStatus status,
+        String accessToken,
+        String refreshToken,
+        long expiresIn
 ) {}
