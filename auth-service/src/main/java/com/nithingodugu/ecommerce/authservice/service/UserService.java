@@ -8,9 +8,9 @@ import java.security.DigestException;
 public interface UserService {
     RegisterResponse register(RegisterRequest request);
 
-    LoginResponse login(@Valid LoginRequest request);
+    AuthTokens login(@Valid LoginRequest request);
 
-    LoginResponse refresh(@Valid RefreshTokenRequest request);
+    AuthTokens refresh(@Valid String refreshToken);
 
     void logout(String refreshToken);
 }

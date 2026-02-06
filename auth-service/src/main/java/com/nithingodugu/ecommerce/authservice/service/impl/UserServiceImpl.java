@@ -55,7 +55,8 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public LoginResponse login(LoginRequest request)     {
+    public AuthTokens login(LoginRequest request){
+
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(()-> new BadCredentialsException(BAD_CREDENTIALS_MSG));
 
@@ -67,14 +68,23 @@ public class UserServiceImpl implements UserService {
             throw new BadCredentialsException(BAD_CREDENTIALS_MSG);
         }
 
+
         String accessToken = jwtService.generateAccessToken(
                 user.getId(), user.getRole().name()
         );
 
-        String refreshTokenValue = UUID.randomUUID().toString();
+        //raw token (sent in cookie)
+        String tokenId = UUID.randomUUID().toString();
+        String tokenSecret = UUID.randomUUID().toString();
+
+        String rawRefreshToken = tokenId + "." + tokenSecret;
+
+        //hashed token (stores in db)
+        String hashedSecret = passwordEncoder.encode(tokenSecret);
 
         RefreshToken refreshToken = new RefreshToken(
-                refreshTokenValue,
+                tokenId,
+                hashedSecret,
                 user,
                 Instant.now().plusMillis(jwtService.getRefreshExpiration() * 1000)
         );
@@ -82,44 +92,92 @@ public class UserServiceImpl implements UserService {
         refreshTokenRepository.save(refreshToken);
 
 
-        return new LoginResponse(
+        return new AuthTokens(
                 user.getId(),
                 user.getEmail(),
                 user.getRole(),
                 user.getStatus(),
                 accessToken,
-                refreshTokenValue,
-                jwtService.getAccessExpiration()
+                jwtService.getAccessExpiration(),
+                rawRefreshToken
         );
     }
 
-    public LoginResponse refresh(RefreshTokenRequest request){
-        RefreshToken token = refreshTokenRepository.findByToken(request.refreshToken())
-                .orElseThrow(() -> new BadCredentialsException(INVALID_REFRESH_TOKEN_MSG));
+    public AuthTokens refresh(String rawRefreshToken){
 
-        System.out.println(request.refreshToken());
-        System.out.println(token);
-        System.out.println(token.getExpiry());
-
-        if(token.isRevoked() || token.getExpiry().isBefore(Instant.now())){
+        String[] tokenParts = rawRefreshToken.split("\\.");
+        if(tokenParts.length != 2){
             throw new BadCredentialsException(INVALID_REFRESH_TOKEN_MSG);
         }
 
-        User user = token.getUser();
+        String tokenId = tokenParts[0];
+        String tokenSecret = tokenParts[1];
+
+        RefreshToken storedToken = refreshTokenRepository
+                .findByTokenIdAndRevokedFalse(tokenId)
+                .orElseThrow(() -> new BadCredentialsException(INVALID_REFRESH_TOKEN_MSG));
+
+        if(
+                storedToken.isRevoked()
+                        || storedToken.getExpiry().isBefore(Instant.now())
+                        || !passwordEncoder.matches(tokenSecret, storedToken.getTokenHash())
+
+        ){
+            throw new BadCredentialsException(INVALID_REFRESH_TOKEN_MSG);
+        }
+
+        //rotation
+        storedToken.revoke();
+        refreshTokenRepository.save(storedToken);
+
+        User user = storedToken.getUser();
 
         String newAccessToken = jwtService.generateAccessToken(
                 user.getId(),
                 user.getRole().name()
         );
 
-        return mapToLoginResponse(user, newAccessToken, request.refreshToken());
+        String newTokenId = UUID.randomUUID().toString();
+        String newTokenSecret = UUID.randomUUID().toString();
+
+        String newRawRefreshToken = newTokenId + "." + newTokenSecret;
+
+        //hashed token (stores in db)
+        String hashedSecret = passwordEncoder.encode(newTokenSecret);
+
+        RefreshToken newRefreshToken = new RefreshToken(
+                newTokenId,
+                hashedSecret,
+                user,
+                Instant.now().plusMillis(jwtService.getRefreshExpiration() * 1000)
+        );
+        refreshTokenRepository.save(newRefreshToken);
+
+        return new AuthTokens(
+                user.getId(),
+                user.getEmail(),
+                user.getRole(),
+                user.getStatus(),
+                newAccessToken,
+                jwtService.getAccessExpiration(),
+                newRawRefreshToken
+        );
     }
+
 
     @Override
     public void logout(String refreshToken) {
 
-        RefreshToken token = refreshTokenRepository.findByToken(refreshToken)
-                .orElseThrow(() -> new BadCredentialsException("Invalid refresh token"));
+        String[] tokenParts = refreshToken.split("\\.");
+        if(tokenParts.length != 2){
+            throw new BadCredentialsException(INVALID_REFRESH_TOKEN_MSG);
+        }
+
+        String tokenId = tokenParts[0];
+
+        RefreshToken token = refreshTokenRepository
+                .findByTokenIdAndRevokedFalse(tokenId)
+                .orElseThrow(() -> new BadCredentialsException(INVALID_REFRESH_TOKEN_MSG));
 
         token.revoke();
         refreshTokenRepository.save(token);
@@ -135,15 +193,4 @@ public class UserServiceImpl implements UserService {
         );
     }
 
-    private LoginResponse mapToLoginResponse(User user, String accessToken, String refreshTokenValue){
-        return new LoginResponse(
-                user.getId(),
-                user.getEmail(),
-                user.getRole(),
-                user.getStatus(),
-                accessToken,
-                refreshTokenValue,
-                jwtService.getAccessExpiration()
-        );
-    }
 }

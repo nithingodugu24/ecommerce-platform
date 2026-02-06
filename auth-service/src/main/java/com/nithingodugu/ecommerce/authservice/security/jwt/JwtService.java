@@ -1,6 +1,7 @@
 package com.nithingodugu.ecommerce.authservice.security.jwt;
 
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,7 +28,7 @@ public class JwtService {
             @Value("${jwt.access-token-expiration}") long accessExpiration,
             @Value("${jwt.refresh-token-expiration}") long refreshExpiration
     ){
-        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+        this.key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
         this.accessExpiration = accessExpiration;
         this.refreshExpiration = refreshExpiration;
     }
