@@ -9,17 +9,18 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "refresh_tokens")
+@Table(name = "refresh_tokens",
+        indexes = @Index(columnList = "tokenId"))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RefreshToken {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @Column(nullable = false, updatable = false)
+    private String tokenId;
 
-    @Column(nullable = false, unique = true)
-    private String token;
+    @Column(nullable = false)
+    private String tokenHash;
 
     @ManyToOne(fetch = FetchType.LAZY)
     private User user;
@@ -28,8 +29,9 @@ public class RefreshToken {
 
     private boolean revoked;
 
-    public RefreshToken(String token, User user, Instant expiry){
-        this.token = token;
+    public RefreshToken(String tokenId, String tokenHash, User user, Instant expiry){
+        this.tokenId = tokenId;
+        this.tokenHash = tokenHash;
         this.user = user;
         this.expiry = expiry;
         this.revoked = false;
