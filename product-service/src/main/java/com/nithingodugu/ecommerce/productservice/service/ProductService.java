@@ -1,15 +1,17 @@
 package com.nithingodugu.ecommerce.productservice.service;
 
-import com.nithingodugu.ecommerce.productservice.dto.CreateProductRequestDto;
-import com.nithingodugu.ecommerce.productservice.dto.EditProductRequestDto;
-import com.nithingodugu.ecommerce.productservice.dto.ProductResponseDto;
+import com.nithingodugu.ecommerce.productservice.dto.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
+
 public interface ProductService {
 
+    //admin service
     ProductResponseDto createProduct(CreateProductRequestDto request);
 
+    //user service
     ProductResponseDto getProductById(Long productId);
 
     Page<ProductResponseDto> getProducts(Pageable pageable);
@@ -19,4 +21,7 @@ public interface ProductService {
     ProductResponseDto editProduct(Long id, EditProductRequestDto request);
 
     void deleteProduct(Long productId);
+
+    //internal service
+    List<ProductPricingResponse> getBulkPricing(BulkProductPricingRequest request);
 }

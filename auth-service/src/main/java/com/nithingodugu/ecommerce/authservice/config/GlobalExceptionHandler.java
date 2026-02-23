@@ -54,12 +54,12 @@ public class GlobalExceptionHandler {
                 ));
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex){
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiError(
                         500,
-                        "Internal server error",
+                        "Internal server error: " + ex.getMessage(),
                         Instant.now()
                 ));
     }

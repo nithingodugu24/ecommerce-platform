@@ -1,4 +1,4 @@
-package com.nithingodugu.ecommerce.productservice.controller;
+package com.nithingodugu.ecommerce.productservice.controller.publicapi;
 
 import com.nithingodugu.ecommerce.productservice.dto.ProductResponseDto;
 import com.nithingodugu.ecommerce.productservice.service.ProductService;
@@ -18,17 +18,17 @@ public class ProductsController {
 
     private final ProductService productService;
 
-    @GetMapping("/{productId}")
-    public ResponseEntity<ProductResponseDto> getProduct(@PathVariable Long productId){
-        return ResponseEntity.ok(productService.getProductById(productId));
-    }
-
     @GetMapping("")
     public ResponseEntity<Page<ProductResponseDto>> getProducts(Pageable pageable){
 
         Page<ProductResponseDto> products = productService.getProducts(pageable);
 
         return ResponseEntity.ok(products);
+    }
+
+    @GetMapping("/{productId}")
+    public ResponseEntity<ProductResponseDto> getProduct(@PathVariable Long productId){
+        return ResponseEntity.ok(productService.getProductById(productId));
     }
 
     @GetMapping("/search/{name}")

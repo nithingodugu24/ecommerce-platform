@@ -1,9 +1,6 @@
-FROM eclipse-termurin:21-jre
+FROM openjdk:27-ea-trixie
 
-WORKDIR /app
+ADD target/auth-service.jar auth-service.jar
 
-COPY target/auth-service-*.jar app.jar
+ENTRYPOINT ["java", "-jar", "auth-service.jar"]
 
-EXPOSE 8000
-
-ENTRYPOINT ["java", "-jar", "app.jar"]

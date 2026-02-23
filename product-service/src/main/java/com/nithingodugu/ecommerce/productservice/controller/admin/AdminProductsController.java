@@ -1,10 +1,12 @@
-package com.nithingodugu.ecommerce.productservice.controller;
+package com.nithingodugu.ecommerce.productservice.controller.admin;
 
 import com.nithingodugu.ecommerce.productservice.dto.CreateProductRequestDto;
 import com.nithingodugu.ecommerce.productservice.dto.EditProductRequestDto;
 import com.nithingodugu.ecommerce.productservice.dto.ProductResponseDto;
 import com.nithingodugu.ecommerce.productservice.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +16,14 @@ import org.springframework.web.bind.annotation.*;
 public class AdminProductsController {
 
     private final ProductService productService;
+
+    @GetMapping("")
+    public ResponseEntity<Page<ProductResponseDto>> getProducts(Pageable pageable){
+
+        Page<ProductResponseDto> products = productService.getProducts(pageable);
+
+        return ResponseEntity.ok(products);
+    }
 
     @PostMapping("")
     public ProductResponseDto createProduct(CreateProductRequestDto request){

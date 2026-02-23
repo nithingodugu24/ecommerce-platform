@@ -6,7 +6,7 @@ spring:
     name: product-service
 
   datasource  :
-    url: jdbc:postgresql://localhost:5432/product_db
+    url: jdbc:postgresql://localhost:5432/order_db
     username: postgres
     password: admin
 
@@ -25,20 +25,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
-    defer-datasource-initialization:
-      true
-    sql:
-      init:
-        mode:
-          always
-        data-locations:
-          classpath:data.sql
-
-
-#spring.jpa.defer-datasource-initialization=true
-#spring.sql.init.mode=always
-#spring.sql.init.data-locations=classpath:data.sql
-
 
 jwt:
   secret: Lq6wZCq7F7T2M1X9w6N0EJ8KXzP9vF5R8WmQH4A2YcU=
