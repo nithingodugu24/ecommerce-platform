@@ -1,5 +1,5 @@
 server:
-  port: 8001
+  port: 8002
 
 spring:
   application:
@@ -30,3 +30,7 @@ jwt:
   secret: Lq6wZCq7F7T2M1X9w6N0EJ8KXzP9vF5R8WmQH4A2YcU=
   access-token-expiration: 900
   refresh-token-expiration: 604800
+
+client:
+  product:
+    base-url: http://localhost:8001

@@ -1,0 +1,131 @@
+package com.nithingodugu.ecommerce.orderservice.service.impl;
+
+import com.nithingodugu.ecommerce.orderservice.client.product.ProductClient;
+import com.nithingodugu.ecommerce.orderservice.domain.entity.Order;
+import com.nithingodugu.ecommerce.orderservice.domain.entity.OrderItem;
+import com.nithingodugu.ecommerce.orderservice.domain.enums.OrderStatus;
+import com.nithingodugu.ecommerce.orderservice.dto.*;
+import com.nithingodugu.ecommerce.orderservice.repository.OrderRepository;
+import com.nithingodugu.ecommerce.orderservice.service.OrderService;
+import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+@Service
+@AllArgsConstructor
+@Slf4j
+public class OrderServiceImpl implements OrderService {
+
+    private final OrderRepository orderRepository;
+    private final ProductClient productClient;
+
+    @Transactional
+    @Override
+    public OrderResponse createOrder(CreateOrderRequest request) {
+
+        List<Long> productIds = request.items()
+                .stream()
+                .map(OrderItemRequest::productId)
+                .toList();
+
+        if(productIds.isEmpty()){
+            throw new IllegalArgumentException("Invalid Order");
+        }
+
+        log.debug("Got product ids starting conection to client");
+
+        List<ProductPricingResponse> pricing = productClient.getBulkProductPricing(productIds);
+
+        log.debug("got response");
+
+
+
+        if(pricing == null || pricing.isEmpty()){
+            throw new IllegalArgumentException("Invalid Order");
+        }
+
+        Order order = new Order();
+        order.setUserId(request.userId());
+        order.setOrderStatus(OrderStatus.CREATED);
+
+        BigDecimal total = BigDecimal.ZERO;
+
+        for(OrderItemRequest itemRequest: request.items()){
+
+            ProductPricingResponse product = pricing.stream()
+                    .filter(p -> p.productId().equals(itemRequest.productId()))
+                    .findFirst()
+                    .orElseThrow();
+
+            if (itemRequest.quantity() <= 0 || !product.active()){
+                throw new RuntimeException("Product inactive");
+            }
+
+            OrderItem item = new OrderItem();
+            item.setOrder(order);
+            item.setProductId(product.productId());
+            item.setProductName(product.name());
+            item.setPrice(product.price());
+            item.setQuantity(itemRequest.quantity());
+
+            total = total.add(
+                    BigDecimal.valueOf(product.price()).
+                            multiply(BigDecimal.valueOf(itemRequest.quantity()))
+            );
+
+            order.getOrderItems().add(item);
+
+        }
+
+        order.setTotalAmount(total);
+        orderRepository.save(order);
+
+        List<OrderItemResponse> items = order.getOrderItems()
+                .stream()
+                .map(item -> new OrderItemResponse(
+                        item.getProductId(),
+                        item.getProductName(),
+                        item.getPrice(),
+                        item.getQuantity()
+                ))
+                .toList();
+
+        return new OrderResponse(
+                order.getId(),
+                order.getOrderStatus().name(),
+                order.getTotalAmount(),
+                items,
+                order.getCreatedAt()
+        );
+
+    }
+
+    @Override
+    public OrderResponse getOrder(Long id) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow();
+
+        List<OrderItemResponse> items = order.getOrderItems()
+                .stream()
+                .map(item -> new OrderItemResponse(
+                        item.getProductId(),
+                        item.getProductName(),
+                        item.getPrice(),
+                        item.getQuantity()
+                ))
+                .toList();
+
+        return new OrderResponse(
+                order.getId(),
+                order.getOrderStatus().name(),
+                order.getTotalAmount(),
+                items,
+                order.getCreatedAt()
+        );
+
+    }
+}
