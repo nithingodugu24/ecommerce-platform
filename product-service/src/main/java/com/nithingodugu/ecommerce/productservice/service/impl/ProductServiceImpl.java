@@ -1,9 +1,7 @@
 package com.nithingodugu.ecommerce.productservice.service.impl;
 
 import com.nithingodugu.ecommerce.productservice.domain.entity.Product;
-import com.nithingodugu.ecommerce.productservice.dto.CreateProductRequestDto;
-import com.nithingodugu.ecommerce.productservice.dto.EditProductRequestDto;
-import com.nithingodugu.ecommerce.productservice.dto.ProductResponseDto;
+import com.nithingodugu.ecommerce.productservice.dto.*;
 import com.nithingodugu.ecommerce.productservice.exceptions.ProductNotFoundException;
 import com.nithingodugu.ecommerce.productservice.repository.ProductRepository;
 import com.nithingodugu.ecommerce.productservice.service.ProductService;
@@ -11,6 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -84,8 +85,6 @@ public class ProductServiceImpl implements ProductService {
         productRepository.delete(product);
     }
 
-
-
     private ProductResponseDto mapToResponse(Product product) {
         return new ProductResponseDto(
                 product.getName(),
@@ -97,4 +96,15 @@ public class ProductServiceImpl implements ProductService {
         );
     }
 
+    @Override
+    public List<ProductPricingResponse> getBulkPricing(BulkProductPricingRequest request) {
+
+        List<Long> ids = request.ids;
+
+        if(ids == null || ids.isEmpty()){
+            return List.of();
+        }
+
+        return productRepository.findPricingByIds(ids);
+    }
 }

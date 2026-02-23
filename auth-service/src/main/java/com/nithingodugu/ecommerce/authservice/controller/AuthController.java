@@ -1,7 +1,7 @@
 package com.nithingodugu.ecommerce.authservice.controller;
 
 import com.nithingodugu.ecommerce.authservice.dto.*;
-import com.nithingodugu.ecommerce.authservice.security.jwt.JwtService;
+import com.nithingodugu.ecommerce.authservice.security.jwt.JwtUtil;
 import com.nithingodugu.ecommerce.authservice.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final JwtService jwtService;
+    private final JwtUtil jwtUtil;
     private final UserService userService;
 
     @PostMapping("/register")
@@ -39,7 +39,7 @@ public class AuthController {
                 .secure(true)
                 .sameSite("Strict")
                 .path("/auth")
-                .maxAge(jwtService.getRefreshExpiration())
+                .maxAge(jwtUtil.getRefreshExpiration())
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
@@ -70,7 +70,7 @@ public class AuthController {
                 .secure(true)
                 .sameSite("Strict")
                 .path("/auth")
-                .maxAge(jwtService.getRefreshExpiration())
+                .maxAge(jwtUtil.getRefreshExpiration())
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());

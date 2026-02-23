@@ -7,8 +7,11 @@ import com.nithingodugu.ecommerce.authservice.domain.enums.UserStatus;
 import com.nithingodugu.ecommerce.authservice.dto.*;
 import com.nithingodugu.ecommerce.authservice.repository.RefreshTokenRepository;
 import com.nithingodugu.ecommerce.authservice.repository.UserRepository;
-import com.nithingodugu.ecommerce.authservice.security.jwt.JwtService;
+import com.nithingodugu.ecommerce.authservice.security.jwt.JwtUtil;
 import com.nithingodugu.ecommerce.authservice.service.UserService;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -26,8 +29,9 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
+    private final JwtUtil jwtUtil;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final AuthenticationManager authenticationManager;
 
     private static final String BAD_CREDENTIALS_MSG = "Invalid email or password";
     private static final String ACCOUNT_INACTIVE_MSG = "Your account is not active";
@@ -56,19 +60,26 @@ public class UserServiceImpl implements UserService {
     @Override
     public AuthTokens login(LoginRequest request){
 
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(()-> new BadCredentialsException(BAD_CREDENTIALS_MSG));
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.email(), request.password())
+        );
+
+        User user = (User) authentication.getPrincipal();
+
+
+//        User user = userRepository.findByEmail(request.email())
+//                .orElseThrow(()-> new BadCredentialsException(BAD_CREDENTIALS_MSG));
 
         if(user.getStatus() != UserStatus.ACTIVE){
             throw new DisabledException(ACCOUNT_INACTIVE_MSG);
         }
 
-        if(!passwordEncoder.matches(request.password(), user.getPasswordHash())){
-            throw new BadCredentialsException(BAD_CREDENTIALS_MSG);
-        }
+//        if(!passwordEncoder.matches(request.password(), user.getPasswordHash())){
+//            throw new BadCredentialsException(BAD_CREDENTIALS_MSG);
+//        }
 
 
-        String accessToken = jwtService.generateAccessToken(
+        String accessToken = jwtUtil.generateAccessToken(
                 user.getId(), user.getRole().name()
         );
 
@@ -85,7 +96,7 @@ public class UserServiceImpl implements UserService {
                 tokenId,
                 hashedSecret,
                 user,
-                Instant.now().plusMillis(jwtService.getRefreshExpiration() * 1000)
+                Instant.now().plusMillis(jwtUtil.getRefreshExpiration() * 1000)
         );
 
         refreshTokenRepository.save(refreshToken);
@@ -97,7 +108,7 @@ public class UserServiceImpl implements UserService {
                 user.getRole(),
                 user.getStatus(),
                 accessToken,
-                jwtService.getAccessExpiration(),
+                jwtUtil.getAccessExpiration(),
                 rawRefreshToken
         );
     }
@@ -131,7 +142,7 @@ public class UserServiceImpl implements UserService {
 
         User user = storedToken.getUser();
 
-        String newAccessToken = jwtService.generateAccessToken(
+        String newAccessToken = jwtUtil.generateAccessToken(
                 user.getId(),
                 user.getRole().name()
         );
@@ -148,7 +159,7 @@ public class UserServiceImpl implements UserService {
                 newTokenId,
                 hashedSecret,
                 user,
-                Instant.now().plusMillis(jwtService.getRefreshExpiration() * 1000)
+                Instant.now().plusMillis(jwtUtil.getRefreshExpiration() * 1000)
         );
         refreshTokenRepository.save(newRefreshToken);
 
@@ -158,7 +169,7 @@ public class UserServiceImpl implements UserService {
                 user.getRole(),
                 user.getStatus(),
                 newAccessToken,
-                jwtService.getAccessExpiration(),
+                jwtUtil.getAccessExpiration(),
                 newRawRefreshToken
         );
     }

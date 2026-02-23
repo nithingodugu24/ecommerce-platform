@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
-public class JwtService {
+public class JwtUtil {
 
     private final SecretKey key;
 
@@ -23,7 +23,7 @@ public class JwtService {
     @Getter
     private final long refreshExpiration;
 
-    public JwtService(
+    public JwtUtil(
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.access-token-expiration}") long accessExpiration,
             @Value("${jwt.refresh-token-expiration}") long refreshExpiration
