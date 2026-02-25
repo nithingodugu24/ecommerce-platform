@@ -10,14 +10,6 @@ spring:
     username: postgres
     password: admin
 
-  cache:
-    type: redis
-    data:
-      redis:
-        host: ${SPRING_REDIS_HOST}
-        port: ${SPRING_REDIS_PORT}
-        timeout: 2000
-
   jpa:
     hibernate:
       ddl-auto: update
@@ -34,6 +26,14 @@ spring:
         data-locations:
           classpath:data.sql
 
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: inventory-group
+      auto-offset-reset: earliest
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 #spring.jpa.defer-datasource-initialization=true
 #spring.sql.init.mode=always
