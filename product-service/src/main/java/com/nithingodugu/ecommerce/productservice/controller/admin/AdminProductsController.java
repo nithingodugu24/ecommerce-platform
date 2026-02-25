@@ -4,6 +4,7 @@ import com.nithingodugu.ecommerce.productservice.dto.CreateProductRequestDto;
 import com.nithingodugu.ecommerce.productservice.dto.EditProductRequestDto;
 import com.nithingodugu.ecommerce.productservice.dto.ProductResponseDto;
 import com.nithingodugu.ecommerce.productservice.service.ProductService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,7 +27,7 @@ public class AdminProductsController {
     }
 
     @PostMapping("")
-    public ProductResponseDto createProduct(CreateProductRequestDto request){
+    public ProductResponseDto createProduct(@Valid @RequestBody CreateProductRequestDto request){
         return productService.createProduct(request);
     }
 

@@ -4,6 +4,7 @@ public record CreateProductRequestDto(
         String name,
         String description,
         Double price,
-        String category
+        String category,
+        Integer availableQuantity
 ) {
 }
