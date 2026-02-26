@@ -4,11 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class OrderItemEvent {
+@Data
+public class InventoryReservedEvent {
 
-    private Long productId;
-    private Integer quantity;
+    private Long orderId;
 }

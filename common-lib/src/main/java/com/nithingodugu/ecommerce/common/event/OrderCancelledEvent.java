@@ -9,14 +9,11 @@ import java.util.List;
 import java.util.UUID;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
-public class OrderCreatedEvent {
-    private UUID userId;
+@AllArgsConstructor
+public class OrderCancelledEvent {
 
     private Long orderId;
-
-    private BigDecimal totalAmount;
 
     private List<OrderItemEvent> items;
 }
