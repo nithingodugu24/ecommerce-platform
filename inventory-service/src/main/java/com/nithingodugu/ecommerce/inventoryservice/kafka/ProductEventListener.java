@@ -1,13 +1,14 @@
 package com.nithingodugu.ecommerce.inventoryservice.kafka;
 
 import com.nithingodugu.ecommerce.inventoryservice.domain.entity.Inventory;
-import com.nithingodugu.ecommerce.inventoryservice.event.ProductCreatedEvent;
+//import com.nithingodugu.ecommerce.inventoryservice.event.ProductCreatedEvent;
 import com.nithingodugu.ecommerce.inventoryservice.repository.InventoryRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
+import com.nithingodugu.ecommerce.common.event.ProductCreatedEvent;
 
 @Slf4j
 @Service
@@ -16,7 +17,7 @@ public class ProductEventListener {
 
     private final InventoryRepository inventoryRepository;
 
-    @KafkaListener(topics = "product.created", groupId = "inventory-group")
+    @KafkaListener(topics = "product.created")
     @Transactional
     public void handleProductCreated(ProductCreatedEvent event){
 

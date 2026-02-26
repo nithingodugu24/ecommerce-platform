@@ -28,4 +28,8 @@ public class OrdersController {
         return orderService.getOrder(id);
     }
 
+    @PostMapping("/cancel/{id}")
+    public OrderResponse cancelOrder(@PathVariable Long id){
+        return orderService.cancelOrder(id);
+    }
 }

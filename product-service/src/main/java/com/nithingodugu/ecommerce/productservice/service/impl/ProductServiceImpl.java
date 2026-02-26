@@ -5,14 +5,14 @@ import com.nithingodugu.ecommerce.productservice.dto.*;
 import com.nithingodugu.ecommerce.productservice.exceptions.ProductNotFoundException;
 import com.nithingodugu.ecommerce.productservice.repository.ProductRepository;
 import com.nithingodugu.ecommerce.productservice.service.ProductService;
-import com.nithingodugu.ecommerce.productservice.event.ProductCreatedEvent;
+//import com.nithingodugu.ecommerce.productservice.event.ProductCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
-//import com.nithingodugu.common.event.ProductCreatedEvent;
+import com.nithingodugu.ecommerce.common.event.ProductCreatedEvent;
 
 import java.util.List;
 
@@ -22,8 +22,8 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
 
-    @Autowired
-    private KafkaTemplate<String, ProductCreatedEvent> kafkaTemplate;
+
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Override
     public ProductResponseDto createProduct(CreateProductRequestDto request) {
