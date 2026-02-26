@@ -1,4 +1,4 @@
-package com.nithingodugu.ecommerce.productservice.event;
+package com.nithingodugu.ecommerce.common.event;
 
 import lombok.Data;
 
@@ -9,3 +9,4 @@ public class ProductCreatedEvent {
     private String name;
     private Integer initialQuantity;
 }
+
