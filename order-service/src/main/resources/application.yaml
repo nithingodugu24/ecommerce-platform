@@ -4,32 +4,28 @@ server:
 spring:
   application:
     name: product-service
-
+  web:
+    resources:
+      add-mappings: false
   datasource  :
     url: jdbc:postgresql://localhost:5432/order_db
     username: postgres
     password: admin
 
-  cache:
-    type: redis
-    data:
-      redis:
-        host: ${SPRING_REDIS_HOST}
-        port: ${SPRING_REDIS_PORT}
-        timeout: 2000
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: order-group
+
+
 
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
-
-jwt:
-  secret: Lq6wZCq7F7T2M1X9w6N0EJ8KXzP9vF5R8WmQH4A2YcU=
-  access-token-expiration: 900
-  refresh-token-expiration: 604800
 
 client:
   product:
