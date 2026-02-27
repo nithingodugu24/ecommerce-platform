@@ -6,9 +6,10 @@ spring:
     name: product-service
 
   datasource  :
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: jdbc:postgresql://localhost:5432/auth_db
+    username: postgres
+    password: admin
+
 
   jpa:
     hibernate:
