@@ -1,4 +1,4 @@
-package com.nithingodugu.ecommerce.authservice;
+package com.nithingodugu.ecommerce.authservice.authservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

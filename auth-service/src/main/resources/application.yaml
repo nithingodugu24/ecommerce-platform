@@ -22,3 +22,9 @@ jwt:
   secret: Lq6wZCq7F7T2M1X9w6N0EJ8KXzP9vF5R8WmQH4A2YcU=
   access-token-expiration: 900
   refresh-token-expiration: 604800
+
+eureka:
+  client:
+    fetch-registry: false
+    service-url:
+      defaultZone: http://localhost:8761/eureka
