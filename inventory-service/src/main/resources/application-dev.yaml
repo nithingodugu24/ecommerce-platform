@@ -1,15 +1,14 @@
 server:
-  port: 8001
+  port: 8003
 
 spring:
   application:
-    name: product-service
+    name: inventory-service
 
   datasource  :
-    url: jdbc:postgresql://localhost:5432/product_db
+    url: jdbc:postgresql://localhost:5432/inventory_db
     username: postgres
     password: admin
-
 
   jpa:
     hibernate:
@@ -27,15 +26,18 @@ spring:
         data-locations:
           classpath:data.sql
 
+
   kafka:
     bootstrap-servers: localhost:9092
-
-#spring.jpa.defer-datasource-initialization=true
-#spring.sql.init.mode=always
-#spring.sql.init.data-locations=classpath:data.sql
+    consumer:
+      group-id: inventory-group
 
 eureka:
   client:
     fetch-registry: false
     service-url:
       defaultZone: http://localhost:8761/eureka
+
+#logging:
+#  level:
+#    root: DEBUG
