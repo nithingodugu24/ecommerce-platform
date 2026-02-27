@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @AllArgsConstructor
@@ -190,6 +191,27 @@ public class OrderServiceImpl implements OrderService {
                 items,
                 order.getCreatedAt()
         );
+
+    }
+
+    @Override
+    public List<OrderResponse> getMyOrders(UUID userId) {
+        List<Order> orders = orderRepository.findByUserId(userId);
+
+        return orders.stream()
+                .map(order -> new OrderResponse(
+                        order.getId(),
+                        order.getOrderStatus().name(),
+                        order.getTotalAmount(),
+                        order.getOrderItems().stream().map(orderItem -> new OrderItemResponse(
+                                orderItem.getProductId(),
+                                orderItem.getProductName(),
+                                orderItem.getPrice(),
+                                orderItem.getQuantity()
+                        )).toList(),
+                        order.getCreatedAt()
+                ))
+                .toList();
 
     }
 }

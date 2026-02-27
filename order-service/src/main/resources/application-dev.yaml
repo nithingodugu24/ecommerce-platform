@@ -8,9 +8,9 @@ spring:
     resources:
       add-mappings: false
   datasource  :
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: jdbc:postgresql://localhost:5432/order_db
+    username: postgres
+    password: admin
 
   kafka:
     bootstrap-servers: localhost:9092
