@@ -32,6 +32,11 @@ spring:
     consumer:
       group-id: inventory-group
 
+eureka:
+  client:
+    fetch-registry: false
+    service-url:
+      defaultZone: http://localhost:8761/eureka
 #logging:
 #  level:
 #    root: DEBUG

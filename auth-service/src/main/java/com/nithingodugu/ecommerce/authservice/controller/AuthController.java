@@ -1,6 +1,7 @@
 package com.nithingodugu.ecommerce.authservice.controller;
 
 import com.nithingodugu.ecommerce.authservice.dto.*;
+import com.nithingodugu.ecommerce.authservice.dto.*;
 import com.nithingodugu.ecommerce.authservice.security.jwt.JwtUtil;
 import com.nithingodugu.ecommerce.authservice.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;

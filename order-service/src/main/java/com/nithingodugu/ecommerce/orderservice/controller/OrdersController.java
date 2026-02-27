@@ -9,6 +9,9 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/orders")
 @AllArgsConstructor
@@ -21,6 +24,11 @@ public class OrdersController {
             @RequestBody CreateOrderRequest request
             ){
         return ResponseEntity.ok(orderService.createOrder(request));
+    }
+
+    @GetMapping
+    public List<OrderResponse> getMyOrders(@RequestHeader(name = "X-USER-ID") UUID userId){
+        return orderService.getMyOrders(userId);
     }
 
     @GetMapping("/{id}")
