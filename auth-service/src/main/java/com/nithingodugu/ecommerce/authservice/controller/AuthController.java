@@ -1,4 +1,4 @@
-package com.nithingodugu.ecommerce.authservice.controller;
+package com.nithingodugu.ecommerce.authservice.controller.publicapi;
 
 import com.nithingodugu.ecommerce.authservice.dto.*;
 import com.nithingodugu.ecommerce.authservice.dto.*;
