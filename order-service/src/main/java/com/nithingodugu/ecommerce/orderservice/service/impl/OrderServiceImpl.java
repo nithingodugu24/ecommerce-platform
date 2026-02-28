@@ -4,7 +4,6 @@ import com.nithingodugu.ecommerce.common.event.OrderCancelledEvent;
 import com.nithingodugu.ecommerce.common.event.OrderCreatedEvent;
 import com.nithingodugu.ecommerce.common.event.OrderItemEvent;
 import com.nithingodugu.ecommerce.orderservice.client.product.ProductClient;
-import com.nithingodugu.ecommerce.orderservice.config.KafkaConfig;
 import com.nithingodugu.ecommerce.orderservice.domain.entity.Order;
 import com.nithingodugu.ecommerce.orderservice.domain.entity.OrderItem;
 import com.nithingodugu.ecommerce.orderservice.domain.enums.OrderStatus;
@@ -45,10 +44,11 @@ public class OrderServiceImpl implements OrderService {
 
         log.debug("Got product ids starting conection to client");
 
-        List<ProductPricingResponse> pricing = productClient.getBulkProductPricing(productIds);
+        List<ProductPricingResponse> pricing = productClient.getBulkProductPricing(
+                new BulkProductPricingRequest(productIds)
+        );
 
         log.debug("got response");
-
 
 
         if(pricing == null || pricing.isEmpty()){

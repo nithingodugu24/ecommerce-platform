@@ -26,7 +26,7 @@ public class InternalProductController {
     public List<ProductPricingResponse> getBulkPricing(
             @RequestBody BulkProductPricingRequest request
     ){
-        log.debug("new internal request");
+        log.info("new internal request");
         return productService.getBulkPricing(request);
     }
 }

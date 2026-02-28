@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
   application:
@@ -31,7 +31,7 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka
+      defaultZone: http://${EUREKA_SERVICE_URL}/eureka
 
 jwt:
-  secret: Lq6wZCq7F7T2M1X9w6N0EJ8KXzP9vF5R8WmQH4A2YcU=
+  secret: ${JWT_SECRET}

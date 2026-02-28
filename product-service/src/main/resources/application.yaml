@@ -1,5 +1,5 @@
 server:
-  port: 8001
+  port: ${SERVER_PORT:8001}
 
 spring:
   application:
@@ -27,7 +27,7 @@ spring:
           classpath:data.sql
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
 
 #spring.jpa.defer-datasource-initialization=true
 #spring.sql.init.mode=always
@@ -37,4 +37,4 @@ eureka:
   client:
     fetch-registry: false
     service-url:
-      defaultZone: http://localhost:8761/eureka
+      defaultZone: http://${EUREKA_SERVICE_URL}/eureka

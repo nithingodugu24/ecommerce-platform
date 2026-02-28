@@ -1,10 +1,8 @@
 package com.nithingodugu.ecommerce.orderservice.controller;
 
-import com.nithingodugu.ecommerce.orderservice.domain.entity.Order;
 import com.nithingodugu.ecommerce.orderservice.dto.CreateOrderRequest;
 import com.nithingodugu.ecommerce.orderservice.dto.OrderResponse;
 import com.nithingodugu.ecommerce.orderservice.service.OrderService;
-import jakarta.persistence.PostRemove;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
