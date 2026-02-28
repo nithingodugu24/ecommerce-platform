@@ -1,5 +1,5 @@
 server:
-  port: 8002
+  port: ${SERVER_PORT:8002}
 
 spring:
   application:
@@ -13,11 +13,9 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD}
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     consumer:
       group-id: order-group
-
-
 
   jpa:
     hibernate:
@@ -27,12 +25,8 @@ spring:
       hibernate:
         format_sql: true
 
-client:
-  product:
-    base-url: http://localhost:8001
-
 eureka:
   client:
-    fetch-registry: false
+    fetch-registry: true
     service-url:
-      defaultZone: http://localhost:8761/eureka
+      defaultZone: http://${EUREKA_SERVICE_URL}/eureka
