@@ -100,6 +100,7 @@ public class ProductServiceImpl implements ProductService {
 
     private ProductResponseDto mapToResponse(Product product) {
         return new ProductResponseDto(
+                product.getId(),
                 product.getName(),
                 product.getDescription(),
                 product.getPrice(),

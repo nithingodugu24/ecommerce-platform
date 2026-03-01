@@ -3,6 +3,7 @@ package com.nithingodugu.ecommerce.orderservice.service.impl;
 import com.nithingodugu.ecommerce.common.event.OrderCancelledEvent;
 import com.nithingodugu.ecommerce.common.event.OrderCreatedEvent;
 import com.nithingodugu.ecommerce.common.event.OrderItemEvent;
+import com.nithingodugu.ecommerce.common.exceptions.OrderNotFoundException;
 import com.nithingodugu.ecommerce.orderservice.client.product.ProductClient;
 import com.nithingodugu.ecommerce.orderservice.domain.entity.Order;
 import com.nithingodugu.ecommerce.orderservice.domain.entity.OrderItem;
@@ -31,7 +32,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Transactional
     @Override
-    public OrderResponse createOrder(CreateOrderRequest request) {
+    public OrderResponse createOrder(UUID userId, CreateOrderRequest request) {
 
         List<Long> productIds = request.items()
                 .stream()
@@ -56,7 +57,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Order order = new Order();
-        order.setUserId(request.userId());
+        order.setUserId(userId);
         order.setOrderStatus(OrderStatus.CREATED);
 
         BigDecimal total = BigDecimal.ZERO;
@@ -129,13 +130,12 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderResponse cancelOrder(Long id) {
-        Order order = orderRepository.findById(id)
-                .orElseThrow();
+    public OrderResponse cancelOrder(UUID userId, Long id) {
+        Order order = orderRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new OrderNotFoundException("Order id not found"));
+
         order.setOrderStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
-
-
 
         List<OrderItemEvent> eventItems = order.getOrderItems()
                 .stream()
@@ -170,9 +170,9 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderResponse getOrder(Long id) {
-        Order order = orderRepository.findById(id)
-                .orElseThrow();
+    public OrderResponse getOrder(UUID userId, Long id) {
+        Order order = orderRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new OrderNotFoundException("Order id not found"));
 
         List<OrderItemResponse> items = order.getOrderItems()
                 .stream()

@@ -16,7 +16,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGenericError(Exception ex){
         log.error(Arrays.toString(ex.getStackTrace()));
-        ex.printStackTrace();
+//        ex.printStackTrace();
         ApiError apiError = new ApiError(
                 "Something went wrong : " + ex.getMessage(),
                 HttpStatus.INTERNAL_SERVER_ERROR

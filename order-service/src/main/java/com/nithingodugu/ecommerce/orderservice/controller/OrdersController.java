@@ -19,9 +19,10 @@ public class OrdersController {
 
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(
+            @RequestHeader(name = "X-USER-ID") UUID userId,
             @RequestBody CreateOrderRequest request
             ){
-        return ResponseEntity.ok(orderService.createOrder(request));
+        return ResponseEntity.ok(orderService.createOrder(userId, request));
     }
 
     @GetMapping
@@ -30,12 +31,16 @@ public class OrdersController {
     }
 
     @GetMapping("/{id}")
-    public OrderResponse getOrder(@PathVariable Long id) {
-        return orderService.getOrder(id);
+    public OrderResponse getOrder(
+            @RequestHeader(name = "X-USER-ID") UUID userId,
+            @PathVariable Long id) {
+        return orderService.getOrder(userId, id);
     }
 
     @PostMapping("/cancel/{id}")
-    public OrderResponse cancelOrder(@PathVariable Long id){
-        return orderService.cancelOrder(id);
+    public OrderResponse cancelOrder(
+            @RequestHeader(name = "X-USER-ID") UUID userId,
+            @PathVariable Long id){
+        return orderService.cancelOrder(userId, id);
     }
 }

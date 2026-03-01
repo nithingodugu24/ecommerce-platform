@@ -1,8 +1,8 @@
 package com.nithingodugu.ecommerce.authservice.controller;
 
 import com.nithingodugu.ecommerce.authservice.dto.*;
-import com.nithingodugu.ecommerce.authservice.dto.*;
 import com.nithingodugu.ecommerce.authservice.security.jwt.JwtUtil;
+import com.nithingodugu.ecommerce.authservice.service.AuthService;
 import com.nithingodugu.ecommerce.authservice.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -18,12 +18,12 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final JwtUtil jwtUtil;
-    private final UserService userService;
+    private final AuthService authService;
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public RegisterResponse register(@Valid @RequestBody RegisterRequest request){
-        return userService.register(request);
+        return authService.register(request);
     }
 
     @PostMapping("/login")
@@ -31,7 +31,7 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request,
             HttpServletResponse response
     ){
-        AuthTokens authTokens = userService.login(request);
+        AuthTokens authTokens = authService.login(request);
 
         ResponseCookie refreshCookie = ResponseCookie.from(
                 "refresh_token", authTokens.refreshToken()
@@ -62,7 +62,7 @@ public class AuthController {
             HttpServletResponse response
     ){
 
-        AuthTokens authTokens = userService.refresh(refreshToken);
+        AuthTokens authTokens = authService.refresh(refreshToken);
 
         ResponseCookie refreshCookie = ResponseCookie.from(
                         "refresh_token", authTokens.refreshToken()
@@ -91,7 +91,7 @@ public class AuthController {
     public void logout(
             @CookieValue(name = "refresh_token") String refreshToken,
             HttpServletResponse response) {
-        userService.logout(refreshToken);
+        authService.logout(refreshToken);
 
         ResponseCookie deleteCookie = ResponseCookie.from(
                 "refresh_token", ""
