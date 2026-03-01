@@ -38,6 +38,7 @@ public class JwtAuthenticationFilter implements GlobalFilter {
             return chain.filter(exchange);
         }
 
+
         String authHeader = exchange
                 .getRequest()
                 .getHeaders()
@@ -54,6 +55,14 @@ public class JwtAuthenticationFilter implements GlobalFilter {
             String userId = claims.getSubject();
             String userRole = claims.get("role").toString();
 
+            /* Check if it is an admin route, if it is then check role
+             * admin routes have /admin in the paths */
+
+//            if (path.contains("/admin") && !userRole.equalsIgnoreCase("admin")){
+//                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+//                return exchange.getResponse().setComplete();
+//            }
+
             ServerHttpRequest mutatedRequest = exchange.getRequest()
                     .mutate()
                     .header("X-USER-ID", userId)
@@ -63,7 +72,7 @@ public class JwtAuthenticationFilter implements GlobalFilter {
 
             return chain.filter(exchange.mutate().request(mutatedRequest).build());
 
-        }catch (Exception e){
+        }catch (Exception ex){
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
