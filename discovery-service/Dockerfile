@@ -1,6 +1,10 @@
-FROM openjdk:27-ea-trixie
+FROM maven:3.9.6-eclipse-temurin-17 AS builder
+WORKDIR /build
 
-ADD target/discovery-service.jar discovery-service.jar
+COPY discovery-service ./discovery-service
+RUN cd discovery-service && mvn clean package -DskipTests
 
-ENTRYPOINT ["java", "-jar", "discovery-service.jar"]
-
+FROM eclipse-temurin:17-jdk
+WORKDIR /app
+COPY --from=builder /build/discovery-service/target/*.jar app.jar
+ENTRYPOINT ["java","-jar","app.jar"]

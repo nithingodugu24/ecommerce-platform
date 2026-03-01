@@ -3,8 +3,6 @@ services:
     image: postgres:16
     container_name: postgres
     restart: always
-    # ports:
-    #   - "5432:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -19,13 +17,11 @@ services:
       retries: 5
     networks:
       - ecom-network
-  
+
   kafka:
     image: apache/kafka:latest
     container_name: kafka
     restart: always
-    # ports:
-    #   - "9092:9092"
     environment:
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_NODE_ID: 1
@@ -41,8 +37,10 @@ services:
       - ecom-network
 
   discovery-service:
-    build: ./discovery-service
-    environment: 
+    build:
+      context: .
+      dockerfile: ./discovery-service/Dockerfile
+    environment:
       SERVER_PORT: 8761
     ports:
       - "8761:8761"
@@ -50,15 +48,14 @@ services:
       - ecom-network
 
   auth-service:
-    build: ./auth-service
+    build:
+      context: .
+      dockerfile: ./auth-service/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
       discovery-service:
         condition: service_started
-    # ports:
-    #   - "8000:8000"
-
     environment:
       SERVER_PORT: 8000
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth_db
@@ -70,7 +67,9 @@ services:
       - ecom-network
 
   product-service:
-    build: ./product-service
+    build:
+      context: .
+      dockerfile: ./product-service/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
@@ -83,14 +82,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       EUREKA_SERVICE_URL: discovery-service:8761
-    # ports:
-    #   - "8001:8001"
-
     networks:
       - ecom-network
 
   order-service:
-    build: ./order-service
+    build:
+      context: .
+      dockerfile: ./order-service/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
@@ -103,14 +101,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       EUREKA_SERVICE_URL: discovery-service:8761
-    # ports:
-    #   - "8002:8002"
-
     networks:
       - ecom-network
 
   inventory-service:
-    build: ./inventory-service
+    build:
+      context: .
+      dockerfile: ./inventory-service/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
@@ -123,13 +120,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       EUREKA_SERVICE_URL: discovery-service:8761
-    # ports:
-    #   - "8003:8003"
     networks:
       - ecom-network
 
   api-gateway:
-    build: ./api-gateway
+    build:
+      context: .
+      dockerfile: ./api-gateway/Dockerfile
     depends_on:
       discovery-service:
         condition: service_started
