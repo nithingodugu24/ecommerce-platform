@@ -7,12 +7,12 @@ A robust, scalable E-commerce Backend Based System built with **Spring Boot** an
 
 This project follows **Microservices Architecture** with the following core components:
 
-* **api-gateway**: Single entry for external clients (port `8080`).
-* **discovery-service**: Eureka service registry (port `8761`).
-- **auth-service**: Authentication and user management (port `8000`).
-- **product-service**: Product catalog operations (port `8001`).
-- **order-service**: Order placement and order workflows (port `8002`).
-- **inventory-service**: Inventory stock and updates (port `8003`).
+- **api-gateway**: Single entry for external clients (port `8080`).
+- **discovery-service**: Eureka service registry (port `8761`).
+- **auth-service**: Authentication and user management (internal port `8000`).
+- **product-service**: Product catalog operations (internal port `8001`).
+- **order-service**: Order placement and order workflows (internal port `8002`).
+- **inventory-service**: Inventory stock and updates (internal port `8003`).
 - **common-lib**: Shared Java library module.
 ---
 
