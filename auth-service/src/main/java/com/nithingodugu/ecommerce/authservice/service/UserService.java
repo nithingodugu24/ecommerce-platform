@@ -1,18 +1,14 @@
 package com.nithingodugu.ecommerce.authservice.service;
 
-import com.nithingodugu.ecommerce.authservice.dto.*;
-import com.nithingodugu.ecommerce.authservice.dto.AuthTokens;
-import com.nithingodugu.ecommerce.authservice.dto.LoginRequest;
-import com.nithingodugu.ecommerce.authservice.dto.RegisterRequest;
-import com.nithingodugu.ecommerce.authservice.dto.RegisterResponse;
+import com.nithingodugu.ecommerce.authservice.dto.ChangePasswordRequest;
+import com.nithingodugu.ecommerce.authservice.dto.UserProfileResponse;
 import jakarta.validation.Valid;
 
+import java.util.UUID;
+
 public interface UserService {
-    RegisterResponse register(RegisterRequest request);
 
-    AuthTokens login(@Valid LoginRequest request);
+    UserProfileResponse getProfile(UUID userId);
 
-    AuthTokens refresh(@Valid String refreshToken);
-
-    void logout(String refreshToken);
+    void changePassword(UUID userId, @Valid ChangePasswordRequest request);
 }

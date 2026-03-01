@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
@@ -49,6 +50,10 @@ public class User implements UserDetails{
         this.createdAt = LocalDateTime.now();
     }
 
+    public void changePassword(String newPasswordHash){
+        this.passwordHash = newPasswordHash;
+    }
+
     @Override
     public @Nullable String getPassword() {
         return passwordHash;
@@ -65,8 +70,10 @@ public class User implements UserDetails{
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(role);
-    }
+        return List.of(
+                new SimpleGrantedAuthority("ROLE_" + role.name())
+        );
 
+    }
 
 }
