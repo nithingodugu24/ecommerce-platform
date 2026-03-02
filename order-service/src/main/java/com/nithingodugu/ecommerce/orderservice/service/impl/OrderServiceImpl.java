@@ -1,10 +1,21 @@
 package com.nithingodugu.ecommerce.orderservice.service.impl;
 
+import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservationItem;
+import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservationRequest;
+import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservationResponse;
+import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservationResult;
+import com.nithingodugu.ecommerce.common.contract.product.ProductPriceDetail;
+import com.nithingodugu.ecommerce.common.contract.product.ProductPricingItem;
+import com.nithingodugu.ecommerce.common.contract.product.ProductsPricingRequest;
+import com.nithingodugu.ecommerce.common.contract.product.ProductsPricingResponse;
 import com.nithingodugu.ecommerce.common.event.OrderCancelledEvent;
 import com.nithingodugu.ecommerce.common.event.OrderCreatedEvent;
 import com.nithingodugu.ecommerce.common.event.OrderItemEvent;
+import com.nithingodugu.ecommerce.common.exceptions.InvalidProductException;
 import com.nithingodugu.ecommerce.common.exceptions.OrderNotFoundException;
-import com.nithingodugu.ecommerce.orderservice.client.product.ProductClient;
+import com.nithingodugu.ecommerce.common.exceptions.OutOfStockException;
+import com.nithingodugu.ecommerce.orderservice.client.InventoryClient;
+import com.nithingodugu.ecommerce.orderservice.client.ProductClient;
 import com.nithingodugu.ecommerce.orderservice.domain.entity.Order;
 import com.nithingodugu.ecommerce.orderservice.domain.entity.OrderItem;
 import com.nithingodugu.ecommerce.orderservice.domain.enums.OrderStatus;
@@ -28,104 +39,95 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final ProductClient productClient;
+    private final InventoryClient inventoryClient;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    @Transactional
     @Override
     public OrderResponse createOrder(UUID userId, CreateOrderRequest request) {
 
-        List<Long> productIds = request.items()
-                .stream()
-                .map(OrderItemRequest::productId)
-                .toList();
+        log.info("Got product ids starting conection to client");
 
-        if(productIds.isEmpty()){
-            throw new IllegalArgumentException("Invalid Order");
-        }
+         /*
+         Call product internal service to validate and calculate totalAmount
+         * */
 
-        log.debug("Got product ids starting conection to client");
-
-        List<ProductPricingResponse> pricing = productClient.getBulkProductPricing(
-                new BulkProductPricingRequest(productIds)
+        ProductsPricingResponse pricing = productClient.quote(
+                new ProductsPricingRequest(request.items().stream()
+                        .map(item->
+                                new ProductPricingItem(
+                                        item.productId().toString(),
+                                        item.quantity()
+                                )
+                        )
+                        .toList()
+                )
         );
 
-        log.debug("got response");
+        log.info("got response {} {}",pricing.message(), pricing.success());
 
 
-        if(pricing == null || pricing.isEmpty()){
-            throw new IllegalArgumentException("Invalid Order");
+        if(!pricing.success()){
+            throw new InvalidProductException(pricing.message());
         }
+
+        /*
+        * Create order and store orderItems
+        * */
 
         Order order = new Order();
         order.setUserId(userId);
-        order.setOrderStatus(OrderStatus.CREATED);
+        order.setOrderStatus(OrderStatus.VALIDATED);
+        order.setTotalAmount(pricing.totalAmount());
 
-        BigDecimal total = BigDecimal.ZERO;
-
-        for(OrderItemRequest itemRequest: request.items()){
-
-            ProductPricingResponse product = pricing.stream()
-                    .filter(p -> p.productId().equals(itemRequest.productId()))
-                    .findFirst()
-                    .orElseThrow();
-
-            if (itemRequest.quantity() <= 0 || !product.active()){
-                throw new RuntimeException("Product inactive");
-            }
+        for(ProductPriceDetail product: pricing.items()){
 
             OrderItem item = new OrderItem();
             item.setOrder(order);
-            item.setProductId(product.productId());
+            item.setProductId(Long.valueOf(product.productId()));
             item.setProductName(product.name());
-            item.setPrice(product.price());
-            item.setQuantity(itemRequest.quantity());
-
-            total = total.add(
-                    BigDecimal.valueOf(product.price()).
-                            multiply(BigDecimal.valueOf(itemRequest.quantity()))
-            );
+            item.setPrice(product.unitPrice().doubleValue());
+            item.setQuantity(product.quantity());
 
             order.getOrderItems().add(item);
-
         }
 
-        order.setTotalAmount(total);
         orderRepository.save(order);
 
-        List<OrderItemResponse> items = order.getOrderItems()
-                .stream()
-                .map(item -> new OrderItemResponse(
-                        item.getProductId(),
-                        item.getProductName(),
-                        item.getPrice(),
-                        item.getQuantity()
-                ))
-                .toList();
+         /*
+          Call inventory service to reserve stock
+         */
 
-        OrderCreatedEvent event = new OrderCreatedEvent();
-        event.setOrderId(order.getId());
-        event.setTotalAmount(order.getTotalAmount());
-        event.setUserId(order.getUserId());
+        InventoryReservationResponse reservationResponse = inventoryClient.reservation(
+                new InventoryReservationRequest(
+                        order.getId().toString(),
+                        request.items()
+                                .stream()
+                                .map(item->
+                                        new InventoryReservationItem(
+                                                item.productId().toString(),
+                                                item.quantity()
+                                        )
+                                )
+                                .toList()
 
-        List<OrderItemEvent> eventItems = order.getOrderItems()
-                .stream()
-                .map(item -> new OrderItemEvent(
-                                item.getProductId(),
-                                item.getQuantity()
-                        ))
-                .toList();
-        event.setItems(eventItems);
-
-        kafkaTemplate.send("order.created", event);
-
-
-        return new OrderResponse(
-                order.getId(),
-                order.getOrderStatus().name(),
-                order.getTotalAmount(),
-                items,
-                order.getCreatedAt()
+                )
         );
+
+        log.info(reservationResponse.message(), reservationResponse.status());
+
+        if (reservationResponse.status() != InventoryReservationResult.SUCCESS){
+
+            order.setOrderStatus(OrderStatus.REJECTED_OUT_OF_STOCK);
+            orderRepository.save(order);
+
+            throw new OutOfStockException(pricing.message());
+        }
+
+        order.setOrderStatus(OrderStatus.STOCK_RESERVED);
+        orderRepository.save(order);
+
+
+        return mapToResponse(order);
 
     }
 
@@ -149,24 +151,7 @@ public class OrderServiceImpl implements OrderService {
         event.setItems(eventItems);
         kafkaTemplate.send("order.cancelled", event);
 
-        List<OrderItemResponse> items = order.getOrderItems()
-                .stream()
-                .map(item -> new OrderItemResponse(
-                        item.getProductId(),
-                        item.getProductName(),
-                        item.getPrice(),
-                        item.getQuantity()
-                ))
-                .toList();
-
-        return new OrderResponse(
-                order.getId(),
-                order.getOrderStatus().name(),
-                order.getTotalAmount(),
-                items,
-                order.getCreatedAt()
-        );
-
+        return mapToResponse(order);
     }
 
     @Override
@@ -174,6 +159,21 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new OrderNotFoundException("Order id not found"));
 
+        return mapToResponse(order);
+    }
+
+    @Override
+    public List<OrderResponse> getMyOrders(UUID userId) {
+        List<Order> orders = orderRepository.findByUserId(userId);
+
+        return orders.stream()
+                .map(this::mapToResponse)
+                .toList();
+
+    }
+
+    private OrderResponse mapToResponse(Order order){
+
         List<OrderItemResponse> items = order.getOrderItems()
                 .stream()
                 .map(item -> new OrderItemResponse(
@@ -191,27 +191,5 @@ public class OrderServiceImpl implements OrderService {
                 items,
                 order.getCreatedAt()
         );
-
-    }
-
-    @Override
-    public List<OrderResponse> getMyOrders(UUID userId) {
-        List<Order> orders = orderRepository.findByUserId(userId);
-
-        return orders.stream()
-                .map(order -> new OrderResponse(
-                        order.getId(),
-                        order.getOrderStatus().name(),
-                        order.getTotalAmount(),
-                        order.getOrderItems().stream().map(orderItem -> new OrderItemResponse(
-                                orderItem.getProductId(),
-                                orderItem.getProductName(),
-                                orderItem.getPrice(),
-                                orderItem.getQuantity()
-                        )).toList(),
-                        order.getCreatedAt()
-                ))
-                .toList();
-
     }
 }
