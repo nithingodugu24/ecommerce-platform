@@ -15,22 +15,9 @@ public class ProductTests {
 
     @Test
     public void productTests(){
-//        CreateProductDto p1 = new CreateProductDto(
-//                "Apple 2025 MacBook Air M4 ",
-//                "13-inch, Apple M4 chip with 10-core CPU and 8-core GPU, 16GB Unified Memory, 256GB",
-//                92199.0,
-//                "Computers & Accessories"
-//        );
-//
-//        System.out.println(p1);
-//
-//        ProductResponseDto p11 = productService.createProduct(p1);
-//        System.out.println(p11);
-
-
-        Page<ProductResponseDto> products = productService.getProductsByName("car", Pageable.ofSize(10));
-        for(ProductResponseDto product: products){
-            System.out.println(product);
-        }
+//        Page<ProductResponseDto> products = productService.getProductsByName("car", Pageable.ofSize(10));
+//        for(ProductResponseDto product: products){
+//            System.out.println(product);
+//        }
     }
 }

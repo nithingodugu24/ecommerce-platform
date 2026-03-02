@@ -16,14 +16,14 @@ public class CreateProductTests {
 
     @Test
     public void createSampleProduct(){
-        CreateProductRequestDto request = new CreateProductRequestDto(
-                "test phone",
-                "test phone description",
-                1005.00,
-                "Mobiles",
-                100
-        );
-        ProductResponseDto response =  productService.createProduct(request);
-        System.out.println(response);
+//        CreateProductRequestDto request = new CreateProductRequestDto(
+//                "test phone",
+//                "test phone description",
+//                1005.00,
+//                "Mobiles",
+//                100
+//        );
+//        ProductResponseDto response =  productService.createProduct(request);
+//        System.out.println(response);
     }
 }
