@@ -1,5 +1,7 @@
 package com.nithingodugu.ecommerce.productservice.service;
 
+import com.nithingodugu.ecommerce.common.contract.product.ProductsPricingRequest;
+import com.nithingodugu.ecommerce.common.contract.product.ProductsPricingResponse;
 import com.nithingodugu.ecommerce.productservice.dto.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,5 +25,5 @@ public interface ProductService {
     void deleteProduct(Long productId);
 
     //internal service
-    List<ProductPricingResponse> getBulkPricing(BulkProductPricingRequest request);
+    ProductsPricingResponse quote(ProductsPricingRequest request);
 }

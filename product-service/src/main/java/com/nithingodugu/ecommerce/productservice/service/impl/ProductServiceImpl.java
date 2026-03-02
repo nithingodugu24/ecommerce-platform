@@ -1,20 +1,24 @@
 package com.nithingodugu.ecommerce.productservice.service.impl;
 
+import com.nithingodugu.ecommerce.common.contract.product.ProductPriceDetail;
+import com.nithingodugu.ecommerce.common.contract.product.ProductPricingItem;
+import com.nithingodugu.ecommerce.common.contract.product.ProductsPricingRequest;
+import com.nithingodugu.ecommerce.common.contract.product.ProductsPricingResponse;
 import com.nithingodugu.ecommerce.productservice.domain.entity.Product;
 import com.nithingodugu.ecommerce.productservice.dto.*;
 import com.nithingodugu.ecommerce.productservice.exceptions.ProductNotFoundException;
 import com.nithingodugu.ecommerce.productservice.repository.ProductRepository;
 import com.nithingodugu.ecommerce.productservice.service.ProductService;
-//import com.nithingodugu.ecommerce.productservice.event.ProductCreatedEvent;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import com.nithingodugu.ecommerce.common.event.ProductCreatedEvent;
 
-import java.util.List;
+import java.math.BigDecimal;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -111,14 +115,65 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<ProductPricingResponse> getBulkPricing(BulkProductPricingRequest request) {
+    public ProductsPricingResponse quote(ProductsPricingRequest request) {
 
-        List<Long> ids = request.ids;
+        Map<String, Integer> requestedQtyMap = request.items().stream()
+                .collect(Collectors.toMap(
+                        ProductPricingItem::productId,
+                        ProductPricingItem::quantity,
+                        Integer::sum
+                ));
 
-        if(ids == null || ids.isEmpty()){
-            return List.of();
+
+        List<Product> products = productRepository.findByIdIn(requestedQtyMap.keySet());
+
+        if (products.size() != requestedQtyMap.size()) {
+            return new ProductsPricingResponse(
+                    false,
+                    "One or more products not found",
+                    null,
+                    null
+            );
         }
 
-        return productRepository.findPricingByIds(ids);
+        List<ProductPriceDetail> priceDetails = new ArrayList<>();
+
+        BigDecimal total = BigDecimal.ZERO;
+
+        for (Product product : products) {
+
+            if (!product.getActive()) {
+                return new ProductsPricingResponse(
+                        false,
+                        "Product inactive: " + product.getId(),
+                        null,
+                        null
+                );
+            }
+
+            Integer qty = requestedQtyMap.get(product.getId().toString());
+
+            BigDecimal lineTotal = BigDecimal.valueOf(product.getPrice())
+                    .multiply(BigDecimal.valueOf(qty));
+
+            total = total.add(lineTotal);
+
+            priceDetails.add(
+                    new ProductPriceDetail(
+                            product.getId().toString(),
+                            product.getName(),
+                            qty,
+                            BigDecimal.valueOf(product.getPrice()),
+                            lineTotal
+                    )
+            );
+        }
+        return new ProductsPricingResponse(
+                true,
+                "success",
+                priceDetails,
+                total
+        );
+
     }
 }
