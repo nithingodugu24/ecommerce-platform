@@ -6,6 +6,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.reactive.resource.NoResourceFoundException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.file.AccessDeniedException;
 import java.time.Instant;
@@ -26,13 +28,25 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex){
-        log.error(ex.toString());
+
+        if (ex instanceof ResponseStatusException rse) {
+            return ResponseEntity.status(rse.getStatusCode())
+                    .body(new ApiError(
+                            rse.getStatusCode().value(),
+                            rse.getReason(),
+                            Instant.now()
+                    ));
+        }
+
+        log.error("Unexpected error", ex);
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiError(
                         500,
-                        "Internal server error: " + ex.getMessage(),
+                        "Internal server error",
                         Instant.now()
                 ));
     }
