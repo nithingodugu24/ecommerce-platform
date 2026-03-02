@@ -106,7 +106,6 @@ Each service has:
 
 ## Key Design Concepts Used
 
-* Database per service
 * Event-driven architecture
 * Loose coupling
 * Fault tolerance
