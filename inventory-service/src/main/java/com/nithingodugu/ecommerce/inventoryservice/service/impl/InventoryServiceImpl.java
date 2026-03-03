@@ -42,6 +42,7 @@ public class InventoryServiceImpl implements InventoryService {
             log.info("upaded rows {}", updatedRows);
 
             if (updatedRows == 0) {
+                log.info("product outofstock");
                 return new InventoryReservationResponse(
                         InventoryReservationResult.OUT_OF_STOCK,
                         "product out of stock or not found"
@@ -50,7 +51,7 @@ public class InventoryServiceImpl implements InventoryService {
         }
 
         InventoryReservation inventoryReservation = new InventoryReservation();
-        inventoryReservation.setOrderId(Long.valueOf(request.orderId()));
+        inventoryReservation.setOrderId(request.orderId());
         inventoryReservation.setStatus(ReservationStatus.RESERVED);
         inventoryReservation.setExpiresAt(LocalDateTime.now().plusMinutes(30));
 
