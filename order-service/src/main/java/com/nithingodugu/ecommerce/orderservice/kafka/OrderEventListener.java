@@ -1,6 +1,8 @@
 package com.nithingodugu.ecommerce.orderservice.kafka;
 
 import com.nithingodugu.ecommerce.common.event.InventoryFailedEvent;
+import com.nithingodugu.ecommerce.common.event.PaymentAuthorizedEvent;
+import com.nithingodugu.ecommerce.common.event.PaymentFailedEvent;
 import com.nithingodugu.ecommerce.orderservice.domain.entity.Order;
 import com.nithingodugu.ecommerce.orderservice.domain.enums.OrderStatus;
 import com.nithingodugu.ecommerce.orderservice.dto.OrderResponse;
@@ -24,6 +26,31 @@ public class OrderEventListener {
         log.info("event recieved of inventory failed");
         Order order = orderRepository.getById(event.getOrderId());
         order.setOrderStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+    }
+
+    @KafkaListener(topics = "payment.authorized")
+    public void handlePaymentAuthorized(PaymentAuthorizedEvent event){
+        Order order = orderRepository.findByOrderNumber(event.orderId()).orElse(null);
+        if (order == null){
+            log.error("Invalid orderid from event");
+            return;
+        }
+
+        order.setOrderStatus(OrderStatus.CONFIRMED);
+        orderRepository.save(order);
+    }
+
+    @KafkaListener(topics = "payment.failed")
+    public void handlePaymentFailed(PaymentFailedEvent event){
+        Order order = orderRepository.findByOrderNumber(event.orderId()).orElse(null);
+        if (order == null){
+            log.error("Invalid orderid from event2");
+            return;
+        }
+
+        order.setOrderStatus(OrderStatus.PAYMENT_FAILED);
+        //trigger release stock
         orderRepository.save(order);
     }
 

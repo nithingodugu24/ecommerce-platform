@@ -1,9 +1,20 @@
 package com.nithingodugu.ecommerce.orderservice.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+
 import java.util.List;
 import java.util.UUID;
 
 public record CreateOrderRequest(
-        List<OrderItemRequest> items
+
+        @NotEmpty(message = "Item list cannot be empty")
+        @Valid
+        List<OrderItemRequest> items,
+
+        @NotBlank(message = "Payment token is required")
+        String paymentToken
 ) {
 }

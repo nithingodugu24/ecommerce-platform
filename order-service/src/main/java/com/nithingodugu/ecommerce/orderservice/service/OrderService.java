@@ -1,5 +1,6 @@
 package com.nithingodugu.ecommerce.orderservice.service;
 
+import com.nithingodugu.ecommerce.common.contract.order.OrderDetailsResponse;
 import com.nithingodugu.ecommerce.orderservice.domain.entity.Order;
 import com.nithingodugu.ecommerce.orderservice.dto.CreateOrderRequest;
 import com.nithingodugu.ecommerce.orderservice.dto.OrderResponse;
@@ -16,4 +17,6 @@ public interface OrderService {
     OrderResponse getOrder(UUID userId, Long id);
 
     List<OrderResponse> getMyOrders(UUID userId);
+
+    OrderDetailsResponse getInternalOrderDetails(String orderNumber);
 }
