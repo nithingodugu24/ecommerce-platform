@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/products")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
-public class AdminProductsController {
+public class    AdminProductsController {
 
     private final ProductService productService;
 

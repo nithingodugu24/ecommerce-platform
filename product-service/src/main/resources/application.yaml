@@ -29,6 +29,15 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
 
+  cache:
+    type: redis
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: 6379
+
+
 #spring.jpa.defer-datasource-initialization=true
 #spring.sql.init.mode=always
 #spring.sql.init.data-locations=classpath:data.sql
@@ -38,3 +47,4 @@ eureka:
     fetch-registry: false
     service-url:
       defaultZone: http://${EUREKA_SERVICE_URL}/eureka
+

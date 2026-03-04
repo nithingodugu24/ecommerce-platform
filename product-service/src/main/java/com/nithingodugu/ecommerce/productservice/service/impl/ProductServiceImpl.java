@@ -10,6 +10,10 @@ import com.nithingodugu.ecommerce.productservice.exceptions.ProductNotFoundExcep
 import com.nithingodugu.ecommerce.productservice.repository.ProductRepository;
 import com.nithingodugu.ecommerce.productservice.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -25,11 +29,20 @@ import java.util.stream.Collectors;
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
-
-
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
+    private static final String PRODUCT_CACHE = "product";
+    private static final String PRODUCT_PAGE_CACHE = "product_page";
+    private static final String PRODUCT_SEARCH_CACHE = "product_search";
+
     @Override
+    @Caching(
+            put = @CachePut(cacheNames = PRODUCT_CACHE, key = "#result.id"),
+            evict = {
+                    @CacheEvict(cacheNames = PRODUCT_PAGE_CACHE, allEntries = true),
+                    @CacheEvict(cacheNames = PRODUCT_SEARCH_CACHE, allEntries = true)
+            }
+    )
     public ProductResponseDto createProduct(CreateProductRequestDto request) {
 
         Product product = Product.builder()
@@ -53,23 +66,17 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Page<ProductResponseDto> getProducts(Pageable pageable) {
-        Page<Product> products = productRepository.findAll(pageable);
 
-        return products.map(this::mapToResponse);
-    }
+    @Caching(
+            put = @CachePut(cacheNames = PRODUCT_CACHE, key = "#productId"),
+            evict = {
+                    @CacheEvict(cacheNames = PRODUCT_PAGE_CACHE, allEntries = true),
+                    @CacheEvict(cacheNames = PRODUCT_SEARCH_CACHE, allEntries = true)
+            }
+    )
+    public ProductResponseDto editProduct(Long productId, EditProductRequestDto request) {
 
-    @Override
-    public Page<ProductResponseDto> getProductsByName(String name, Pageable pageable) {
-
-       Page<Product> products = productRepository.findByNameContainingIgnoreCaseAndActiveTrue(name, pageable);
-
-       return products.map(this::mapToResponse);
-    }
-
-    @Override
-    public ProductResponseDto editProduct(Long id, EditProductRequestDto request) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException("product not found"));
 
         product.setName(request.name());
@@ -85,6 +92,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Cacheable(cacheNames = PRODUCT_CACHE, key = "#productId")
     public ProductResponseDto getProductById(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException("product not found"));
@@ -93,6 +101,13 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Caching(
+            evict = {
+                    @CacheEvict(cacheNames = PRODUCT_CACHE, key = "#productId"),
+                    @CacheEvict(cacheNames = PRODUCT_PAGE_CACHE, allEntries = true),
+                    @CacheEvict(cacheNames = PRODUCT_SEARCH_CACHE, allEntries = true)
+            }
+    )
     public void deleteProduct(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException("product not found"));
@@ -102,16 +117,21 @@ public class ProductServiceImpl implements ProductService {
         productRepository.delete(product);
     }
 
-    private ProductResponseDto mapToResponse(Product product) {
-        return new ProductResponseDto(
-                product.getId(),
-                product.getName(),
-                product.getDescription(),
-                product.getPrice(),
-                product.getCategory(),
-                product.getActive(),
-                product.getCreatedAt()
-        );
+    @Override
+    @Cacheable(cacheNames = PRODUCT_PAGE_CACHE, key = "#pageable.pageNumber + '_' + #pageable.pageSize + '_' + #pageable.sort")
+    public Page<ProductResponseDto> getProducts(Pageable pageable) {
+        Page<Product> products = productRepository.findAll(pageable);
+
+        return products.map(this::mapToResponse);
+    }
+
+    @Override
+    @Cacheable(cacheNames = PRODUCT_SEARCH_CACHE, key = "#name + '_' + #pageable.pageNumber + '_' + #pageable.pageSize + '_' + #pageable.sort")
+    public Page<ProductResponseDto> getProductsByName(String name, Pageable pageable) {
+
+       Page<Product> products = productRepository.findByNameContainingIgnoreCaseAndActiveTrue(name, pageable);
+
+       return products.map(this::mapToResponse);
     }
 
     @Override
@@ -175,5 +195,17 @@ public class ProductServiceImpl implements ProductService {
                 total
         );
 
+    }
+
+    private ProductResponseDto mapToResponse(Product product) {
+        return new ProductResponseDto(
+                product.getId(),
+                product.getName(),
+                product.getDescription(),
+                product.getPrice(),
+                product.getCategory(),
+                product.getActive(),
+                product.getCreatedAt()
+        );
     }
 }

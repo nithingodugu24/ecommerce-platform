@@ -14,7 +14,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
         format_sql: true
@@ -29,6 +29,14 @@ spring:
 
   kafka:
     bootstrap-servers: localhost:9092
+
+  cache:
+    type: redis
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: 6379
 
 #spring.jpa.defer-datasource-initialization=true
 #spring.sql.init.mode=always
