@@ -4,17 +4,18 @@ import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservation
 import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservationRequest;
 import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservationResponse;
 import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservationResult;
+import com.nithingodugu.ecommerce.common.contract.order.OrderDetailsResponse;
 import com.nithingodugu.ecommerce.common.contract.product.ProductPriceDetail;
 import com.nithingodugu.ecommerce.common.contract.product.ProductPricingItem;
 import com.nithingodugu.ecommerce.common.contract.product.ProductsPricingRequest;
 import com.nithingodugu.ecommerce.common.contract.product.ProductsPricingResponse;
 import com.nithingodugu.ecommerce.common.event.OrderCancelledEvent;
-import com.nithingodugu.ecommerce.common.event.OrderCreatedEvent;
 import com.nithingodugu.ecommerce.common.event.OrderItemEvent;
 import com.nithingodugu.ecommerce.common.exceptions.InvalidProductException;
 import com.nithingodugu.ecommerce.common.exceptions.OrderNotFoundException;
 import com.nithingodugu.ecommerce.common.exceptions.OutOfStockException;
 import com.nithingodugu.ecommerce.orderservice.client.InventoryClient;
+import com.nithingodugu.ecommerce.orderservice.client.PaymentClient;
 import com.nithingodugu.ecommerce.orderservice.client.ProductClient;
 import com.nithingodugu.ecommerce.orderservice.domain.entity.Order;
 import com.nithingodugu.ecommerce.orderservice.domain.entity.OrderItem;
@@ -22,13 +23,10 @@ import com.nithingodugu.ecommerce.orderservice.domain.enums.OrderStatus;
 import com.nithingodugu.ecommerce.orderservice.dto.*;
 import com.nithingodugu.ecommerce.orderservice.repository.OrderRepository;
 import com.nithingodugu.ecommerce.orderservice.service.OrderService;
-import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -40,6 +38,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final ProductClient productClient;
     private final InventoryClient inventoryClient;
+    private final PaymentClient paymentClient;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Override
@@ -65,41 +64,16 @@ public class OrderServiceImpl implements OrderService {
 
         log.info("got response {} {}",pricing.message(), pricing.success());
 
-
         if(!pricing.success()){
             throw new InvalidProductException(pricing.message());
         }
 
-        /*
-        * Create order and store orderItems
-        * */
-
-        Order order = new Order();
-        order.setUserId(userId);
-        order.setOrderStatus(OrderStatus.VALIDATED);
-        order.setTotalAmount(pricing.totalAmount());
-
-        for(ProductPriceDetail product: pricing.items()){
-
-            OrderItem item = new OrderItem();
-            item.setOrder(order);
-            item.setProductId(Long.valueOf(product.productId()));
-            item.setProductName(product.name());
-            item.setPrice(product.unitPrice().doubleValue());
-            item.setQuantity(product.quantity());
-
-            order.getOrderItems().add(item);
-        }
-
-        orderRepository.save(order);
-
-         /*
-          Call inventory service to reserve stock
-         */
+        //Businsess orderId
+        String orderNumber = UUID.randomUUID().toString();
 
         InventoryReservationResponse reservationResponse = inventoryClient.reservation(
                 new InventoryReservationRequest(
-                        order.getId().toString(),
+                        orderNumber,
                         request.items()
                                 .stream()
                                 .map(item->
@@ -113,19 +87,59 @@ public class OrderServiceImpl implements OrderService {
                 )
         );
 
-        log.info(reservationResponse.message(), reservationResponse.status());
+        log.info(reservationResponse.message());
+        log.info(String.valueOf(reservationResponse.status()));
+
 
         if (reservationResponse.status() != InventoryReservationResult.SUCCESS){
-
-            order.setOrderStatus(OrderStatus.REJECTED_OUT_OF_STOCK);
-            orderRepository.save(order);
-
-            throw new OutOfStockException(pricing.message());
+            throw new OutOfStockException(reservationResponse.message());
         }
 
-        order.setOrderStatus(OrderStatus.STOCK_RESERVED);
-        orderRepository.save(order);
+        Order order = new Order();
+        order.setOrderNumber(orderNumber);
+        order.setUserId(userId);
+        order.setTotalAmount(pricing.totalAmount());
 
+        for(ProductPriceDetail product: pricing.items()){
+
+            OrderItem item = new OrderItem();
+            item.setOrder(order);
+            item.setProductId(Long.valueOf(product.productId()));
+            item.setProductName(product.name());
+            item.setPrice(product.unitPrice().doubleValue());
+            item.setQuantity(product.quantity());
+
+            order.addOrderItem(item);
+
+        }
+        order.setOrderStatus(OrderStatus.PAYMENT_PENDING);
+        order = orderRepository.save(order);
+
+        /*
+        * Send payment authorization request
+        * */
+
+//        PaymentResponse paymentResponse = paymentClient.authorize(new AuthorizePaymentRequest(
+//                order.getId().toString(),
+//                order.getTotalAmount(),
+//                request.paymentToken()
+//        ));
+//
+//        if (!paymentResponse.success()){
+//
+//            order.setOrderStatus(OrderStatus.PAYMENT_FAILED);
+//            orderRepository.save(order);
+//
+//            InventoryReleaseEvent inventoryReleaseEvent = new InventoryReleaseEvent(
+//                    order.getId().toString()
+//            );
+//
+//            kafkaTemplate.send("inventory.release", inventoryReleaseEvent);
+//            return mapToResponse(order);
+//        }
+//        order.setOrderStatus(OrderStatus.CONFIRMED);
+//
+//        orderRepository.save(order);
 
         return mapToResponse(order);
 
@@ -185,11 +199,30 @@ public class OrderServiceImpl implements OrderService {
                 .toList();
 
         return new OrderResponse(
-                order.getId(),
+                order.getOrderNumber(),
                 order.getOrderStatus().name(),
                 order.getTotalAmount(),
                 items,
                 order.getCreatedAt()
+        );
+    }
+
+    @Override
+    public OrderDetailsResponse getInternalOrderDetails(String orderNumber) {
+        Order order = orderRepository.findByOrderNumber(orderNumber).orElse(null);
+
+        if (order == null){
+            return new OrderDetailsResponse(
+                    false,
+                    "Invalid Order",
+                    null
+            );
+        }
+
+        return new OrderDetailsResponse(
+                true,
+                "success",
+                order.getTotalAmount()
         );
     }
 }

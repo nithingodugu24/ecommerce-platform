@@ -22,8 +22,8 @@ public class InventoryReservation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Long orderId;
+    @Column(unique = true, nullable = false)
+    private String orderId;
 
     @Enumerated(EnumType.STRING)
     private ReservationStatus status;

@@ -3,6 +3,7 @@ package com.nithingodugu.ecommerce.orderservice.controller;
 import com.nithingodugu.ecommerce.orderservice.dto.CreateOrderRequest;
 import com.nithingodugu.ecommerce.orderservice.dto.OrderResponse;
 import com.nithingodugu.ecommerce.orderservice.service.OrderService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,7 +23,7 @@ public class OrdersController {
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(
             @AuthenticationPrincipal UUID userId,
-            @RequestBody CreateOrderRequest request
+            @Valid @RequestBody CreateOrderRequest request
             ){
         return ResponseEntity.ok(orderService.createOrder(userId, request));
     }
