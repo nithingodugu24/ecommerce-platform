@@ -123,6 +123,26 @@ services:
     networks:
       - ecom-network
 
+  payment-service:
+    build:
+      context: .
+      dockerfile: ./payment-service/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_started
+    environment:
+      SERVER_PORT: 8004
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/payment_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      EUREKA_SERVICE_URL: discovery-service:8761
+    networks:
+      - ecom-network
+
+
   api-gateway:
     build:
       context: .
