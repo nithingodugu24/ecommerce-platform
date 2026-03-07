@@ -16,9 +16,9 @@ public interface ProductService {
     //user service
     ProductResponseDto getProductById(Long productId);
 
-    Page<ProductResponseDto> getProducts(Pageable pageable);
+    PageResponse<ProductResponseDto> getProducts(Pageable pageable);
 
-    Page<ProductResponseDto> getProductsByName(String name, Pageable pageable);
+    PageResponse<ProductResponseDto> getProductsByName(String name, Pageable pageable);
 
     ProductResponseDto editProduct(Long id, EditProductRequestDto request);
 

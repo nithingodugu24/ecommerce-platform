@@ -119,19 +119,23 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Cacheable(cacheNames = PRODUCT_PAGE_CACHE, key = "#pageable.pageNumber + '_' + #pageable.pageSize + '_' + #pageable.sort")
-    public Page<ProductResponseDto> getProducts(Pageable pageable) {
-        Page<Product> products = productRepository.findAll(pageable);
+    public PageResponse<ProductResponseDto> getProducts(Pageable pageable) {
 
-        return products.map(this::mapToResponse);
+        Page<Product> products = productRepository.findAll(pageable);
+        Page<ProductResponseDto> dtoPage = products.map(this::mapToResponse);
+
+        return new PageResponse<>(dtoPage);
+
     }
 
     @Override
     @Cacheable(cacheNames = PRODUCT_SEARCH_CACHE, key = "#name + '_' + #pageable.pageNumber + '_' + #pageable.pageSize + '_' + #pageable.sort")
-    public Page<ProductResponseDto> getProductsByName(String name, Pageable pageable) {
+    public PageResponse<ProductResponseDto> getProductsByName(String name, Pageable pageable) {
 
        Page<Product> products = productRepository.findByNameContainingIgnoreCaseAndActiveTrue(name, pageable);
+        Page<ProductResponseDto> dtoPage = products.map(this::mapToResponse);
 
-       return products.map(this::mapToResponse);
+       return new PageResponse<>(dtoPage);
     }
 
     @Override

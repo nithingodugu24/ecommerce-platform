@@ -2,6 +2,7 @@ package com.nithingodugu.ecommerce.apigateway.security.jwt;
 
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -14,9 +15,9 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 
-@Service
+@Component
 @RequiredArgsConstructor
-public class JwtAuthenticationFilter implements GlobalFilter {
+public class AuthenticationFilter implements GlobalFilter, Ordered {
 
     private final JwtUtil jwtUtil;
 
@@ -32,11 +33,11 @@ public class JwtAuthenticationFilter implements GlobalFilter {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 
-        String path = exchange.getRequest().getURI().getPath();
-
-        if(isPublicPath(path)){
-            return chain.filter(exchange);
-        }
+//        String path = exchange.getRequest().getURI().getPath();
+//
+//        if(isPublicPath(path)){
+//            return chain.filter(exchange);
+//        }
 
 
         String authHeader = exchange
@@ -52,6 +53,7 @@ public class JwtAuthenticationFilter implements GlobalFilter {
         try{
             String token = authHeader.substring(7);
             Claims claims = jwtUtil.validateToken(token);
+
             String userId = claims.getSubject();
             String userRole = claims.get("role").toString();
 
@@ -77,5 +79,10 @@ public class JwtAuthenticationFilter implements GlobalFilter {
             return exchange.getResponse().setComplete();
         }
 
+    }
+
+    @Override
+    public int getOrder() {
+        return -1;
     }
 }
