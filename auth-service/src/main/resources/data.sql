@@ -1,2 +1,2 @@
-INSERT INTO users (id,created_at,email,password_hash,"role",status) VALUES
-    ('e4d8cd74-ba1c-4f6d-b12d-e5c9162ea957'::uuid,'2026-02-15 14:46:10.114','nithingodugu627@gmail.com','$2a$10$OXb/1l/WX410CsxctQ7aeu61RSqzArTr5jt0JBPF39sDKzHMVDmHG','ADMIN','ACTIVE');
+-- INSERT INTO users (id,created_at,email,password_hash,role,status) VALUES
+--     ('41de4b06-35ec-42d0-958a-def1831d3a06','2026-02-15 14:46:10.114','admin@gmail.com','$2a$10$C1HWR9nBDdSO2zMmAq9ieujnF9Iab0xNL0eFihQaxXaG6xbpbgF8i','ADMIN','ACTIVE');
