@@ -17,7 +17,7 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class AuthenticationFilter implements GlobalFilter, Ordered {
+public class JwtAuthenticationFilter implements GlobalFilter {
 
     private final JwtUtil jwtUtil;
 
@@ -33,11 +33,11 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 
-//        String path = exchange.getRequest().getURI().getPath();
-//
-//        if(isPublicPath(path)){
-//            return chain.filter(exchange);
-//        }
+        String path = exchange.getRequest().getURI().getPath();
+        
+        if(isPublicPath(path)){
+            return chain.filter(exchange);
+        }
 
 
         String authHeader = exchange
@@ -53,7 +53,6 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         try{
             String token = authHeader.substring(7);
             Claims claims = jwtUtil.validateToken(token);
-
             String userId = claims.getSubject();
             String userRole = claims.get("role").toString();
 
@@ -79,10 +78,5 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             return exchange.getResponse().setComplete();
         }
 
-    }
-
-    @Override
-    public int getOrder() {
-        return -1;
     }
 }

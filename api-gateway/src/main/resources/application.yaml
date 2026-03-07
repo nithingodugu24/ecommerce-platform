@@ -18,6 +18,11 @@ spring:
           predicates:
             - Path=/products/**
 
+        - id: admin-product-service
+          uri: lb://PRODUCT-SERVICE
+          predicates:
+            - Path=/admin/products/**
+
         - id: order-service
           uri: lb://ORDER-SERVICE
           predicates:
