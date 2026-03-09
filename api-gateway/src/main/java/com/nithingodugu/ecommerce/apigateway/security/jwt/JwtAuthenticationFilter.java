@@ -23,7 +23,8 @@ public class JwtAuthenticationFilter implements GlobalFilter {
 
     private static final List<String> PUBLIC_PATHS = List.of(
             "/auth",
-            "/products"
+            "/products",
+            "/payments/webhook"
     );
 
     private boolean isPublicPath(String path){
