@@ -33,6 +33,17 @@ spring:
           predicates:
             - Path=/inventory/**
 
+        - id: payment-service
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/payments/**
+
+security:
+  public-endpoints:
+    - /auth
+    - /products
+    - /payments/webhook
+
 eureka:
   client:
     service-url:
