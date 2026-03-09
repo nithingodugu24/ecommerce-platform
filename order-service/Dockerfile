@@ -1,17 +1,16 @@
 FROM maven:3.9.6-eclipse-temurin-17 AS builder
 WORKDIR /build
 
-# Copy both projects
+COPY common-lib/pom.xml common-lib/pom.xml
+COPY order-service/pom.xml order-service/pom.xml
+
 COPY common-lib ./common-lib
+RUN mvn -f common-lib/pom.xml clean install -DskipTests
+
 COPY order-service ./order-service
+RUN mvn -f order-service/pom.xml clean package -DskipTests
 
-# Build common-lib first
-RUN cd common-lib && mvn clean install -DskipTests
-
-# Then build service
-RUN cd order-service && mvn clean package -DskipTests
-
-FROM eclipse-temurin:17-jdk
+FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=builder /build/order-service/target/*.jar app.jar
 ENTRYPOINT ["java","-jar","app.jar"]

@@ -12,10 +12,10 @@ import org.springframework.web.bind.annotation.*;
 
 
 @RestController
-@RequestMapping("/products")
+@RequestMapping("/admin/products")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
-public class AdminProductsController {
+public class    AdminProductsController {
 
     private final ProductService productService;
 

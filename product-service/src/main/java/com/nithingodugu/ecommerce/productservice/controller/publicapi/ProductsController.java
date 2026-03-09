@@ -1,5 +1,6 @@
 package com.nithingodugu.ecommerce.productservice.controller.publicapi;
 
+import com.nithingodugu.ecommerce.productservice.dto.PageResponse;
 import com.nithingodugu.ecommerce.productservice.dto.ProductResponseDto;
 import com.nithingodugu.ecommerce.productservice.service.ProductService;
 import lombok.RequiredArgsConstructor;
@@ -19,9 +20,9 @@ public class ProductsController {
     private final ProductService productService;
 
     @GetMapping("")
-    public ResponseEntity<Page<ProductResponseDto>> getProducts(Pageable pageable){
+    public ResponseEntity<PageResponse<ProductResponseDto>> getProducts(Pageable pageable){
 
-        Page<ProductResponseDto> products = productService.getProducts(pageable);
+        PageResponse<ProductResponseDto> products = productService.getProducts(pageable);
 
         return ResponseEntity.ok(products);
     }
@@ -32,9 +33,9 @@ public class ProductsController {
     }
 
     @GetMapping("/search/{name}")
-    public ResponseEntity<Page<ProductResponseDto>> getProductsByName(@PathVariable String name, Pageable pageable){
+    public ResponseEntity<PageResponse<ProductResponseDto>> getProductsByName(@PathVariable String name, Pageable pageable){
 
-        Page<ProductResponseDto> products = productService.getProductsByName(name, pageable);
+        PageResponse<ProductResponseDto> products = productService.getProductsByName(name, pageable);
 
         return ResponseEntity.ok(products);
     }

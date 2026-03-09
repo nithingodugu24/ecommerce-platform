@@ -17,17 +17,24 @@ spring:
     properties:
       hibernate:
         format_sql: true
-    defer-datasource-initialization:
-      true
-    sql:
-      init:
-        mode:
-          always
-        data-locations:
-          classpath:data.sql
+  sql:
+    init:
+      mode:
+        never
+      data-locations:
+        classpath:data.sql
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+
+  cache:
+    type: redis
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT}
+
 
 #spring.jpa.defer-datasource-initialization=true
 #spring.sql.init.mode=always
@@ -38,3 +45,4 @@ eureka:
     fetch-registry: false
     service-url:
       defaultZone: http://${EUREKA_SERVICE_URL}/eureka
+
