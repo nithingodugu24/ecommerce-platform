@@ -8,17 +8,25 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Builder
-@NoArgsConstructor
-@Table(name = "products")
+@Table(
+        name = "products",
+        indexes = {
+                @Index(name = "idx_product_id", columnList = "productId")
+        }
+)
 @AllArgsConstructor
 @Getter
+@Builder
+@NoArgsConstructor
 @Setter
 public class Product {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(unique = true, nullable = false)
+    private String productId;
 
     @Column(nullable = false)
     private String name;
