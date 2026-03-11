@@ -25,12 +25,12 @@ public class    AdminProductsController {
     }
 
     @PutMapping("/{productId}")
-    public ProductResponseDto editProduct(@PathVariable Long productId, EditProductRequestDto request){
+    public ProductResponseDto editProduct(@PathVariable String productId, EditProductRequestDto request){
         return productService.editProduct(productId, request);
     }
 
     @DeleteMapping("/{productId}")
-    public ResponseEntity<Void> deleteProduct(@PathVariable Long productId){
+    public ResponseEntity<Void> deleteProduct(@PathVariable String productId){
         productService.deleteProduct(productId);
         return ResponseEntity.accepted().build();
     }

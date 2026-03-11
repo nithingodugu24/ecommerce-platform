@@ -9,25 +9,15 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
+    Optional<Product> findByProductId(String productId);
+
     Page<Product> findByNameContainingIgnoreCaseAndActiveTrue(String name, Pageable pageable);
 
-//    @Query("""
-//        SELECT new com.nithingodugu.ecommerce.common.contract.product.ProductPriceDetail(
-//               p.id,
-//               p.name,
-//               p.price,
-//               p.active
-//        )
-//        FROM Product p
-//        WHERE p.id IN :ids
-//       """)
-//    List<ProductPriceDetail> findPricingByIds(@Param("ids") List<Long> ids);
-
-
-    List<Product> findByIdIn(Set<String> strings);
+    List<Product> findByProductIdIn(Set<String> strings);
 }
