@@ -34,18 +34,16 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
             List<GrantedAuthority> authorities= List.of(
                     new SimpleGrantedAuthority("ROLE_" + userRole)
             );
-           try {
-               UsernamePasswordAuthenticationToken auth =
-                       new UsernamePasswordAuthenticationToken(
-                               userId,
-                               null,
-                               authorities
-                       );
 
-               SecurityContextHolder.getContext().setAuthentication(auth);
-           } catch (Exception e) {
-               log.info("Error parsig uuid, {}", e.getMessage());
-           }
+           UsernamePasswordAuthenticationToken auth =
+                   new UsernamePasswordAuthenticationToken(
+                           userId,
+                           null,
+                           authorities
+                   );
+
+           SecurityContextHolder.getContext().setAuthentication(auth);
+
         }
 
         filterChain.doFilter(request, response);
