@@ -1,5 +1,6 @@
 package com.nithingodugu.ecommerce.productservice.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nithingodugu.ecommerce.common.contract.product.ProductsPricingRequest;
 import com.nithingodugu.ecommerce.common.contract.product.ProductsPricingResponse;
 import com.nithingodugu.ecommerce.productservice.dto.*;
@@ -14,15 +15,15 @@ public interface ProductService {
     ProductResponseDto createProduct(CreateProductRequestDto request);
 
     //user service
-    ProductResponseDto getProductById(Long productId);
+    ProductResponseDto getProductById(String productId);
 
     PageResponse<ProductResponseDto> getProducts(Pageable pageable);
 
     PageResponse<ProductResponseDto> getProductsByName(String name, Pageable pageable);
 
-    ProductResponseDto editProduct(Long id, EditProductRequestDto request);
+    ProductResponseDto editProduct(String productId, EditProductRequestDto request);
 
-    void deleteProduct(Long productId);
+    void deleteProduct(String productId);
 
     //internal service
     ProductsPricingResponse quote(ProductsPricingRequest request);

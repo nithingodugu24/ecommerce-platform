@@ -12,9 +12,9 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 public class OrderCreatedEvent {
-    private UUID userId;
+    private String userId;
 
-    private Long orderId;
+    private String orderId;
 
     private BigDecimal totalAmount;
 

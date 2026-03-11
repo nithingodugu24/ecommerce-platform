@@ -27,27 +27,23 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     )
             throws ServletException, IOException {
-        String userIdHeader = request.getHeader("X-USER-ID");
+        String userId = request.getHeader("X-USER-ID");
         String userRole = request.getHeader("X-USER-ROLE");
 
-        if (userIdHeader != null && userRole != null){
+        if (userId != null && userRole != null){
             List<GrantedAuthority> authorities= List.of(
                     new SimpleGrantedAuthority("ROLE_" + userRole)
             );
-           try {
-               UUID userId = UUID.fromString(userIdHeader);
 
-               UsernamePasswordAuthenticationToken auth =
-                       new UsernamePasswordAuthenticationToken(
-                               userId,
-                               null,
-                               authorities
-                       );
+           UsernamePasswordAuthenticationToken auth =
+                   new UsernamePasswordAuthenticationToken(
+                           userId,
+                           null,
+                           authorities
+                   );
 
-               SecurityContextHolder.getContext().setAuthentication(auth);
-           } catch (Exception e) {
-               log.info("Error parsig uuid, {}", e.getMessage());
-           }
+           SecurityContextHolder.getContext().setAuthentication(auth);
+
         }
 
         filterChain.doFilter(request, response);

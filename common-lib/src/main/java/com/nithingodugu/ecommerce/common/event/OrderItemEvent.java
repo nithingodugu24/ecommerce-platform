@@ -9,6 +9,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class OrderItemEvent {
 
-    private Long productId;
+    private String productId;
     private Integer quantity;
 }

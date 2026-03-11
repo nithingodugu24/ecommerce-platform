@@ -1,4 +1,4 @@
-package com.nithingodugu.ecommerce.inventoryservice.domain.entity.enums;
+package com.nithingodugu.ecommerce.inventoryservice.domain.enums;
 
 public enum ReservationStatus {
     RESERVED,

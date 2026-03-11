@@ -9,7 +9,9 @@ import java.util.Optional;
 
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
-    Optional<Inventory> findByProductId(long productId);
+
+    @Query("SELECT p FROM Inventory p WHERE p.productId = :productId AND status = 'ACTIVE'")
+    Optional<Inventory> findByProductId(String productId);
 
     @Modifying
     @Query("""
@@ -17,7 +19,8 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     SET i.availableQuantity = i.availableQuantity - :qty,
         i.reservedQuantity = i.reservedQuantity + :qty
     WHERE i.productId = :productId
-      AND i.availableQuantity >= :qty
-""")
+    AND status = 'ACTIVE'
+    AND i.availableQuantity >= :qty
+    """)
     Integer reserveStock(String productId, Integer qty);
 }

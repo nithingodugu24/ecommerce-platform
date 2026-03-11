@@ -21,39 +21,6 @@ public class OrderEventListener {
     private final InventoryRepository inventoryRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    @KafkaListener(topics = "order.created")
-    @Transactional
-    public void handleOrderCreated(OrderCreatedEvent event){
-
-        log.info("New order recieved");
-
-        List<OrderItemEvent> items = event.getItems();
-        for(OrderItemEvent item: items){
-            Inventory inventory = inventoryRepository.findByProductId(item.getProductId()).orElseThrow();
-
-            if (inventory.getAvailableQuantity() - inventory.getReservedQuantity() >= item.getQuantity()){
-
-                inventory.setReservedQuantity(inventory.getReservedQuantity() + item.getQuantity());
-                inventoryRepository.save(inventory);
-                log.info("{} reserved", item.getProductId());
-            }else{
-                //send event to cancel the order as product went outofstock
-                log.info("failed event");
-                InventoryFailedEvent failedEvent = new InventoryFailedEvent();
-                failedEvent.setOrderId(event.getOrderId());
-                kafkaTemplate.send("inventory.failed", failedEvent);
-                return;
-            }
-        }
-
-        InventoryReservedEvent reservedEvent = new InventoryReservedEvent(
-                event.getOrderId()
-        );
-
-        kafkaTemplate.send("inventory.reserved", reservedEvent);
-        log.info("order inventory reserved successfully");
-
-    }
 
     @KafkaListener(topics = {"order.cancelled"})
     @Transactional
