@@ -9,5 +9,5 @@ import lombok.NoArgsConstructor;
 @Data
 public class InventoryReservedEvent {
 
-    private Long orderId;
+    private String orderId;
 }

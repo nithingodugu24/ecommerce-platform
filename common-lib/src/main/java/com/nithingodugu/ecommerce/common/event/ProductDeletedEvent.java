@@ -7,8 +7,6 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class OrderItemEvent {
-
+public class ProductDeletedEvent {
     private String productId;
-    private Integer quantity;
 }

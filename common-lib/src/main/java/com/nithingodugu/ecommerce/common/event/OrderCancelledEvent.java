@@ -13,7 +13,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class OrderCancelledEvent {
 
-    private Long orderId;
+    private String orderId;
 
     private List<OrderItemEvent> items;
 }
