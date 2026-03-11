@@ -1,5 +1,6 @@
 package com.nithingodugu.ecommerce.inventoryservice.domain.entity;
 
+import com.nithingodugu.ecommerce.inventoryservice.domain.entity.enums.InventoryStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -12,12 +13,15 @@ public class Inventory {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private Long productId;
+    private String productId;
 
     @Column(nullable = false)
     private Integer availableQuantity;
 
     @Column(nullable = false)
     private Integer reservedQuantity = 0;
+
+    @Enumerated(EnumType.STRING)
+    private InventoryStatus status = InventoryStatus.ACTIVE;
 
 }
