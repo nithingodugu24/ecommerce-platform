@@ -8,8 +8,10 @@ import com.nithingodugu.ecommerce.common.event.ProductCreatedEvent;
 import com.nithingodugu.ecommerce.common.event.ProductDeletedEvent;
 import com.nithingodugu.ecommerce.inventoryservice.domain.entity.Inventory;
 import com.nithingodugu.ecommerce.inventoryservice.domain.entity.InventoryReservation;
-import com.nithingodugu.ecommerce.inventoryservice.domain.entity.enums.InventoryStatus;
-import com.nithingodugu.ecommerce.inventoryservice.domain.entity.enums.ReservationStatus;
+import com.nithingodugu.ecommerce.inventoryservice.domain.enums.InventoryStatus;
+import com.nithingodugu.ecommerce.inventoryservice.domain.enums.ReservationStatus;
+import com.nithingodugu.ecommerce.inventoryservice.dto.InventoryResponseDto;
+import com.nithingodugu.ecommerce.inventoryservice.dto.InventoryUpdateRequestDto;
 import com.nithingodugu.ecommerce.inventoryservice.exceptions.DuplicateInventoryException;
 import com.nithingodugu.ecommerce.inventoryservice.exceptions.InventoryNotFoundException;
 import com.nithingodugu.ecommerce.inventoryservice.repository.InventoryRepository;
@@ -21,7 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.UUID;
 
 @Service
@@ -32,11 +33,9 @@ public class InventoryServiceImpl implements InventoryService {
     private final InventoryRepository inventoryRepository;
     private final InventoryReservationRepository inventoryReservationRepository;
 
-    @Transactional
     @Override
+    @Transactional
     public InventoryReservationResponse reservation(InventoryReservationRequest request) {
-
-        String reservationId = UUID.randomUUID().toString();
 
         for (InventoryReservationItem item : request.items()) {
 
@@ -98,5 +97,35 @@ public class InventoryServiceImpl implements InventoryService {
         inventory.setStatus(InventoryStatus.INACTIVE);
 
         log.info("Marking inventory Inactive for productId={}", event.getProductId());
+    }
+
+    @Override
+    public InventoryResponseDto getInventory(String productId) {
+        Inventory inventory = inventoryRepository
+                .findByProductId(productId)
+                .orElseThrow(()-> new InventoryNotFoundException(productId));
+
+        return mapToResponse(inventory);
+    }
+
+    @Override
+    @Transactional
+    public InventoryResponseDto updateInventory(String productId, InventoryUpdateRequestDto request){
+        Inventory inventory = inventoryRepository
+                .findByProductId(productId)
+                .orElseThrow(()-> new InventoryNotFoundException(productId));
+
+        inventory.setAvailableQuantity(request.availableQuantity());
+
+        return mapToResponse(inventory);
+    }
+
+    private InventoryResponseDto mapToResponse(Inventory inventory){
+        return new InventoryResponseDto(
+                inventory.getProductId(),
+                inventory.getAvailableQuantity(),
+                inventory.getReservedQuantity(),
+                inventory.getStatus()
+        );
     }
 }

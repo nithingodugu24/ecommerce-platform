@@ -1,6 +1,6 @@
 package com.nithingodugu.ecommerce.inventoryservice.domain.entity;
 
-import com.nithingodugu.ecommerce.inventoryservice.domain.entity.enums.InventoryStatus;
+import com.nithingodugu.ecommerce.inventoryservice.domain.enums.InventoryStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 
