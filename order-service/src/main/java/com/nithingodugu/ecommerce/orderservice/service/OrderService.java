@@ -10,13 +10,13 @@ import java.util.UUID;
 
 public interface OrderService {
 
-    OrderResponse createOrder(UUID userId, CreateOrderRequest request);
+    OrderResponse createOrder(String userId, CreateOrderRequest request);
 
-    OrderResponse cancelOrder(UUID userId, Long id);
+    OrderResponse cancelOrder(String userId, String orderId);
 
-    OrderResponse getOrder(UUID userId, Long id);
+    OrderResponse getOrder(String userId, String orderId);
 
-    List<OrderResponse> getMyOrders(UUID userId);
+    List<OrderResponse> getMyOrders(String userId);
 
-    OrderDetailsResponse getInternalOrderDetails(String orderNumber);
+    OrderDetailsResponse getInternalOrderDetails(String orderId);
 }

@@ -1,7 +1,8 @@
-package com.nithingodugu.ecommerce.productservice.outbox.publisher;
+package com.nithingodugu.ecommerce.productservice.scheduler;
 
 import com.nithingodugu.ecommerce.productservice.outbox.entity.OutboxEvent;
 import com.nithingodugu.ecommerce.productservice.outbox.entity.OutboxStatus;
+import com.nithingodugu.ecommerce.productservice.outbox.publisher.KafkaEventPublisher;
 import com.nithingodugu.ecommerce.productservice.outbox.repository.OutboxEventRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 @Component
 @RequiredArgsConstructor

@@ -22,28 +22,28 @@ public class OrdersController {
 
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(
-            @AuthenticationPrincipal UUID userId,
+            @AuthenticationPrincipal String userId,
             @Valid @RequestBody CreateOrderRequest request
             ){
         return ResponseEntity.ok(orderService.createOrder(userId, request));
     }
 
     @GetMapping
-    public List<OrderResponse> getMyOrders(@AuthenticationPrincipal UUID userId){
+    public List<OrderResponse> getMyOrders(@AuthenticationPrincipal String userId){
         return orderService.getMyOrders(userId);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{orderId}")
     public OrderResponse getOrder(
-            @AuthenticationPrincipal UUID userId,
-            @PathVariable Long id) {
-        return orderService.getOrder(userId, id);
+            @AuthenticationPrincipal String userId,
+            @PathVariable String orderId) {
+        return orderService.getOrder(userId, orderId);
     }
 
     @PostMapping("/cancel/{id}")
     public OrderResponse cancelOrder(
-            @AuthenticationPrincipal UUID userId,
-            @PathVariable Long id){
-        return orderService.cancelOrder(userId, id);
+            @AuthenticationPrincipal String userId,
+            @PathVariable String orderId){
+        return orderService.cancelOrder(userId, orderId);
     }
 }
