@@ -4,6 +4,8 @@ import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservation
 import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservationRequest;
 import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservationResponse;
 import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservationResult;
+import com.nithingodugu.ecommerce.common.event.OrderCancelledEvent;
+import com.nithingodugu.ecommerce.common.event.OrderItemEvent;
 import com.nithingodugu.ecommerce.common.event.ProductCreatedEvent;
 import com.nithingodugu.ecommerce.common.event.ProductDeletedEvent;
 import com.nithingodugu.ecommerce.inventoryservice.domain.entity.Inventory;
@@ -23,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -37,14 +40,14 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional
     public InventoryReservationResponse reservation(InventoryReservationRequest request) {
 
+        InventoryReservation reservation = new InventoryReservation();
+
         for (InventoryReservationItem item : request.items()) {
 
             int updatedRows = inventoryRepository.reserveStock(
                     item.productId(),
                     item.quantity()
             );
-
-            log.info("upaded rows {}", updatedRows);
 
             if (updatedRows == 0) {
                 log.info("product outofstock");
@@ -53,14 +56,18 @@ public class InventoryServiceImpl implements InventoryService {
                         "product out of stock or not found"
                 );
             }
+
+            reservation.addItem(
+                    item.productId(),
+                    item.quantity()
+            );
         }
 
-        InventoryReservation inventoryReservation = new InventoryReservation();
-        inventoryReservation.setOrderId(request.orderId());
-        inventoryReservation.setStatus(ReservationStatus.RESERVED);
-        inventoryReservation.setExpiresAt(LocalDateTime.now().plusMinutes(30));
+        reservation.setOrderId(request.orderId());
+        reservation.setStatus(ReservationStatus.RESERVED);
+        reservation.setExpiresAt(LocalDateTime.now().plusMinutes(30));
 
-        inventoryReservationRepository.save(inventoryReservation);
+        inventoryReservationRepository.save(reservation);
 
         return new InventoryReservationResponse(
                 InventoryReservationResult.SUCCESS,
@@ -98,6 +105,21 @@ public class InventoryServiceImpl implements InventoryService {
 
         log.info("Marking inventory Inactive for productId={}", event.getProductId());
     }
+
+    @Override
+    @Transactional
+    public void processOrderCancelled(OrderCancelledEvent event){
+
+        List<OrderItemEvent> items = event.getItems();
+
+        for (OrderItemEvent item : items){
+            if (inventoryRepository.findByProductId(item.getProductId()).isPresent()){
+                inventoryRepository.releaseStock(item.getProductId(), item.getQuantity());
+            }
+        }
+
+    }
+
 
     @Override
     public InventoryResponseDto getInventory(String productId) {
