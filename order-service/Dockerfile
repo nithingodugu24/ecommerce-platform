@@ -5,6 +5,7 @@ COPY common-lib/pom.xml common-lib/pom.xml
 COPY order-service/pom.xml order-service/pom.xml
 
 COPY common-lib ./common-lib
+RUN mvn -f common-lib/pom.xml dependency:go-offline -B
 RUN mvn -f common-lib/pom.xml clean install -DskipTests
 
 COPY order-service ./order-service
