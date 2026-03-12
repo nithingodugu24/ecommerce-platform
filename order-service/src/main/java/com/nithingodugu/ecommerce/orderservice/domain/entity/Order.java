@@ -30,8 +30,8 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false, updatable = false, length = 36)
-    private String orderNumber;
+    @Column(unique = true, nullable = false, updatable = false)
+    private String orderId;
 
     @Column(nullable = false)
     private UUID userId;

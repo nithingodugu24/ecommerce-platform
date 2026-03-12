@@ -24,14 +24,14 @@ public class OrderEventListener {
     @Transactional
     public void handleInventoryFailed(InventoryFailedEvent event){
         log.info("event recieved of inventory failed");
-        Order order = orderRepository.getById(event.getOrderId());
+        Order order = orderRepository.findByOrderId(event.getOrderId()).orElseThrow();
         order.setOrderStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
     }
 
     @KafkaListener(topics = "payment.authorized")
     public void handlePaymentAuthorized(PaymentAuthorizedEvent event){
-        Order order = orderRepository.findByOrderNumber(event.orderId()).orElse(null);
+        Order order = orderRepository.findByOrderId(event.orderId()).orElse(null);
         if (order == null){
             log.error("Invalid orderid from event");
             return;
@@ -43,7 +43,7 @@ public class OrderEventListener {
 
     @KafkaListener(topics = "payment.failed")
     public void handlePaymentFailed(PaymentFailedEvent event){
-        Order order = orderRepository.findByOrderNumber(event.orderId()).orElse(null);
+        Order order = orderRepository.findByOrderId(event.orderId()).orElse(null);
         if (order == null){
             log.error("Invalid orderid from event2");
             return;

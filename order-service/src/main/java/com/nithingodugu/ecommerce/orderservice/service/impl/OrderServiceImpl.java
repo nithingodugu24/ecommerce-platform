@@ -96,7 +96,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Order order = new Order();
-        order.setOrderNumber(orderNumber);
+        order.setOrderId(orderNumber);
         order.setUserId(userId);
         order.setTotalAmount(pricing.totalAmount());
 
@@ -104,7 +104,7 @@ public class OrderServiceImpl implements OrderService {
 
             OrderItem item = new OrderItem();
             item.setOrder(order);
-            item.setProductId(Long.valueOf(product.productId()));
+            item.setProductId(product.productId());
             item.setProductName(product.name());
             item.setPrice(product.unitPrice().doubleValue());
             item.setQuantity(product.quantity());
@@ -161,7 +161,7 @@ public class OrderServiceImpl implements OrderService {
                 ))
                 .toList();
         OrderCancelledEvent event = new OrderCancelledEvent();
-        event.setOrderId(order.getId());
+        event.setOrderId(order.getOrderId());
         event.setItems(eventItems);
         kafkaTemplate.send("order.cancelled", event);
 
@@ -199,7 +199,7 @@ public class OrderServiceImpl implements OrderService {
                 .toList();
 
         return new OrderResponse(
-                order.getOrderNumber(),
+                order.getOrderId(),
                 order.getOrderStatus().name(),
                 order.getTotalAmount(),
                 items,
@@ -208,8 +208,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderDetailsResponse getInternalOrderDetails(String orderNumber) {
-        Order order = orderRepository.findByOrderNumber(orderNumber).orElse(null);
+    public OrderDetailsResponse getInternalOrderDetails(String orderId) {
+        Order order = orderRepository.findByOrderId(orderId).orElse(null);
 
         if (order == null){
             return new OrderDetailsResponse(
