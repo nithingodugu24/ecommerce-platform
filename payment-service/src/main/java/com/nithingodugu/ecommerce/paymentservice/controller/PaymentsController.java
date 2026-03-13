@@ -12,11 +12,11 @@ public class PaymentsController {
 
     private final PaymentService paymentService;
 
-    @PostMapping("/pay/{orderNumber}")
+    @PostMapping("/pay/{orderId}")
     public PaymentCreateResponse pay(
-            @PathVariable String orderNumber
+            @PathVariable String orderId
     ){
-        return paymentService.pay(orderNumber);
+        return paymentService.pay(orderId);
     }
 
     @GetMapping("/{paymentId}")
