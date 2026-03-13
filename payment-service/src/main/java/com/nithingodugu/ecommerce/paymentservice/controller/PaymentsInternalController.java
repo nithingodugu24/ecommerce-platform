@@ -8,13 +8,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/internal/payments")
 @RequiredArgsConstructor
-public class InternalPaymentController {
+public class PaymentsInternalController {
 
     private final PaymentService paymentService;
 
-//    @PostMapping("/authorize")
-//    public PaymentResponse authorize(@RequestBody AuthorizePaymentRequest request){
-//        return paymentService.authorize(request);
-//    }
 
 }

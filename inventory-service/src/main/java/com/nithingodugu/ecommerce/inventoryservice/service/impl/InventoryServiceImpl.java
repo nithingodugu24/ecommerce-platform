@@ -10,12 +10,12 @@ import com.nithingodugu.ecommerce.common.event.ProductCreatedEvent;
 import com.nithingodugu.ecommerce.common.event.ProductDeletedEvent;
 import com.nithingodugu.ecommerce.inventoryservice.domain.entity.Inventory;
 import com.nithingodugu.ecommerce.inventoryservice.domain.entity.InventoryReservation;
+import com.nithingodugu.ecommerce.inventoryservice.domain.entity.ReservationItem;
 import com.nithingodugu.ecommerce.inventoryservice.domain.enums.InventoryStatus;
 import com.nithingodugu.ecommerce.inventoryservice.domain.enums.ReservationStatus;
 import com.nithingodugu.ecommerce.inventoryservice.dto.InventoryResponseDto;
 import com.nithingodugu.ecommerce.inventoryservice.dto.InventoryUpdateRequestDto;
-import com.nithingodugu.ecommerce.inventoryservice.exceptions.DuplicateInventoryException;
-import com.nithingodugu.ecommerce.inventoryservice.exceptions.InventoryNotFoundException;
+import com.nithingodugu.ecommerce.inventoryservice.exceptions.*;
 import com.nithingodugu.ecommerce.inventoryservice.repository.InventoryRepository;
 import com.nithingodugu.ecommerce.inventoryservice.repository.InventoryReservationRepository;
 import com.nithingodugu.ecommerce.inventoryservice.service.InventoryService;
@@ -26,7 +26,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -110,13 +112,42 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional
     public void processOrderCancelled(OrderCancelledEvent event){
 
-        List<OrderItemEvent> items = event.getItems();
+        InventoryReservation reservation = inventoryReservationRepository
+                .findByOrderId(event.getOrderId())
+                .orElseThrow(() -> new ReservationNotFoundException(event.getOrderId()));
 
-        for (OrderItemEvent item : items){
-            if (inventoryRepository.findByProductId(item.getProductId()).isPresent()){
-                inventoryRepository.releaseStock(item.getProductId(), item.getQuantity());
+        if (reservation.getStatus() == ReservationStatus.RELEASED){
+            throw new DuplicateReleaseException(event.getOrderId());
+        }
+
+        List<String> productIds = reservation.getItems().stream()
+                .map(ReservationItem::getProductId)
+                .toList();
+
+        Map<String, Inventory> inventoryMap = inventoryRepository
+                .findAllByProductIdIn(productIds)
+                .stream()
+                .collect(Collectors.toMap(Inventory::getProductId, i -> i));
+
+        for (ReservationItem item : reservation.getItems()) {
+            Inventory inventory = inventoryMap.get(item.getProductId());
+
+            if (inventory == null) {
+                log.error("Inventory not found for productId: {}", item.getProductId());
+//                throw new InventoryNotFoundException(item.getProductId());
+            }
+
+            int updated = inventoryRepository.releaseStock(item.getProductId(), item.getQuantity());
+
+            if (updated == 0) {
+                log.error("Failed to release stock for productId: {} — reservedQty may be insufficient",
+                        item.getProductId());
+//                throw new InventoryReleaseException(event.getOrderId());
             }
         }
+
+        reservation.setStatus(ReservationStatus.RELEASED);
+        inventoryReservationRepository.save(reservation);
 
     }
 

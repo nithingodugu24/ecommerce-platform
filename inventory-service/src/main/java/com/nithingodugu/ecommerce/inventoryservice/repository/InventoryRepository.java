@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
@@ -31,5 +32,7 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
         i.availableQuantity = i.availableQuantity + :qty
     WHERE i.productId = :productId
         """)
-    void releaseStock(String productId, Integer qty);
+    int releaseStock(String productId, Integer qty);
+
+    List<Inventory> findAllByProductIdIn(List<String> productIds);
 }
