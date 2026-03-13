@@ -18,6 +18,7 @@ import com.nithingodugu.ecommerce.productservice.service.ProductService;
 import com.nithingodugu.ecommerce.productservice.util.IdGenerator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
@@ -194,17 +196,16 @@ public class ProductServiceImpl implements ProductService {
         BigDecimal total = BigDecimal.ZERO;
 
         for (Product product : products) {
-
             if (!product.getActive()) {
                 return new ProductsPricingResponse(
                         false,
-                        "Product inactive: " + product.getId(),
+                        "Product inactive: " + product.getProductId(),
                         null,
                         null
                 );
             }
 
-            Integer qty = requestedQtyMap.get(product.getId().toString());
+            Integer qty = requestedQtyMap.get(product.getProductId());
 
             BigDecimal lineTotal = BigDecimal.valueOf(product.getPrice())
                     .multiply(BigDecimal.valueOf(qty));
@@ -213,7 +214,7 @@ public class ProductServiceImpl implements ProductService {
 
             priceDetails.add(
                     new ProductPriceDetail(
-                            product.getId().toString(),
+                            product.getProductId(),
                             product.getName(),
                             qty,
                             BigDecimal.valueOf(product.getPrice()),
