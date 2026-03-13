@@ -19,4 +19,8 @@ public interface OrderService {
     List<OrderResponse> getMyOrders(String userId);
 
     OrderDetailsResponse getInternalOrderDetails(String orderId);
+
+    void processPaymentSuccessOrder(String orderId);
+
+    void processPaymentFailedOrder(String orderId);
 }

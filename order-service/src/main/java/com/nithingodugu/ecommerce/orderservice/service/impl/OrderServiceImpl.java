@@ -12,9 +12,9 @@ import com.nithingodugu.ecommerce.common.contract.product.ProductPricingItem;
 import com.nithingodugu.ecommerce.common.contract.product.ProductsPricingRequest;
 import com.nithingodugu.ecommerce.common.contract.product.ProductsPricingResponse;
 import com.nithingodugu.ecommerce.common.event.OrderCancelledEvent;
+import com.nithingodugu.ecommerce.common.event.OrderConfirmedEvent;
 import com.nithingodugu.ecommerce.common.event.OrderItemEvent;
 import com.nithingodugu.ecommerce.common.exceptions.InvalidProductException;
-import com.nithingodugu.ecommerce.common.exceptions.OrderNotFoundException;
 import com.nithingodugu.ecommerce.common.exceptions.OutOfStockException;
 import com.nithingodugu.ecommerce.orderservice.client.InventoryClient;
 import com.nithingodugu.ecommerce.orderservice.client.ProductClient;
@@ -22,6 +22,8 @@ import com.nithingodugu.ecommerce.orderservice.domain.entity.Order;
 import com.nithingodugu.ecommerce.orderservice.domain.entity.OrderItem;
 import com.nithingodugu.ecommerce.orderservice.domain.enums.OrderStatus;
 import com.nithingodugu.ecommerce.orderservice.dto.*;
+import com.nithingodugu.ecommerce.orderservice.exceptions.DuplicateOrderStateException;
+import com.nithingodugu.ecommerce.orderservice.exceptions.OrderNotFoundException;
 import com.nithingodugu.ecommerce.orderservice.kafka.KafkaTopics;
 import com.nithingodugu.ecommerce.orderservice.outbox.entity.OutboxEvent;
 import com.nithingodugu.ecommerce.orderservice.outbox.entity.OutboxStatus;
@@ -51,8 +53,6 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponse createOrder(String userId, CreateOrderRequest request) {
-
-         //Call product internal service to validate and calculate totalAmount
 
         ProductsPricingResponse pricing = productClient.quote(
                 new ProductsPricingRequest(request.items().stream()
@@ -122,7 +122,7 @@ public class OrderServiceImpl implements OrderService {
             order.addOrderItem(item);
 
         }
-        order.setOrderStatus(OrderStatus.PAYMENT_PENDING);
+        order.setOrderStatus(OrderStatus.PENDING);
         return order;
     }
 
@@ -233,4 +233,92 @@ public class OrderServiceImpl implements OrderService {
                 order.getTotalAmount()
         );
     }
+
+    @Override
+    @Transactional
+    public void processPaymentSuccessOrder(String orderId) {
+
+        Order order = orderRepository
+                .findByOrderId(orderId)
+                .orElseThrow(()-> new OrderNotFoundException(
+                        orderId
+                ));
+
+        if (order.getOrderStatus() == OrderStatus.CONFIRMED){
+            throw new DuplicateOrderStateException(orderId);
+        }
+
+        order.setOrderStatus(OrderStatus.CONFIRMED);
+
+
+        OrderConfirmedEvent event = new OrderConfirmedEvent(
+                orderId
+        );
+
+        String payload;
+
+        try {
+            payload = objectMapper.writeValueAsString(event);
+
+        }catch (JsonProcessingException ex){
+            throw new RuntimeException("Failed to serialize OrderConfirmedEvent", ex);
+        }
+
+        OutboxEvent outbox = new OutboxEvent();
+        outbox.setEventId(UUID.randomUUID().toString());
+        outbox.setAggregateId(orderId);
+        outbox.setTopic(KafkaTopics.ORDER_CONFIRMED);
+        outbox.setPayload(payload);
+        outbox.setStatus(OutboxStatus.PENDING);
+        outboxEventRepository.save(outbox);
+    }
+
+    @Override
+    @Transactional
+    public void processPaymentFailedOrder(String orderId) {
+
+        Order order = orderRepository
+                .findByOrderId(orderId)
+                .orElseThrow(()-> new OrderNotFoundException(
+                        orderId
+                ));
+
+        if (order.getOrderStatus() == OrderStatus.FAILED){
+            throw new DuplicateOrderStateException(orderId);
+        }
+
+        order.setOrderStatus(OrderStatus.FAILED);
+
+        List<OrderItemEvent> eventItems = order.getOrderItems()
+                .stream()
+                .map(item -> new OrderItemEvent(
+                        item.getProductId(),
+                        item.getQuantity()
+                ))
+                .toList();
+
+        OrderCancelledEvent event = new OrderCancelledEvent();
+        event.setOrderId(order.getOrderId());
+        event.setAmountPaid(order.getTotalAmount());
+        event.setItems(eventItems);
+
+        String payload;
+
+        try {
+            payload = objectMapper.writeValueAsString(event);
+
+        }catch (JsonProcessingException ex){
+            throw new RuntimeException("Failed to serialize OrderCancelledEvent", ex);
+        }
+
+        OutboxEvent outbox = new OutboxEvent();
+        outbox.setEventId(UUID.randomUUID().toString());
+        outbox.setAggregateId(orderId);
+        outbox.setTopic(KafkaTopics.ORDER_FAILED);
+        outbox.setPayload(payload);
+        outbox.setStatus(OutboxStatus.PENDING);
+        outboxEventRepository.save(outbox);
+    }
+
+
 }

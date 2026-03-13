@@ -61,7 +61,7 @@ public class GlobalExceptionHandler {
 
         ApiError error = ApiError.builder()
                 .status(HttpStatus.NOT_FOUND.value())
-                .message(ex.getMessage())
+                .message("Fill all the fields")
                 .timestamp(Instant.now())
                 .errors(errors)
                 .build();
