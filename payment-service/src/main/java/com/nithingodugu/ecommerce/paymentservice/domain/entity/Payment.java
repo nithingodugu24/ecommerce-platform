@@ -9,6 +9,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Entity
@@ -17,7 +18,8 @@ import java.time.LocalDateTime;
 @Table(
         name = "payments",
         indexes = {
-                @Index(name = "idx_payment_id", columnList = "paymentId")
+                @Index(name = "idx_payment_id", columnList = "paymentId"),
+                @Index(name = "idx_order_id", columnList = "orderId")
         }
 )
 public class Payment {
@@ -29,8 +31,8 @@ public class Payment {
     @Column(nullable = false, unique = true)
     private String paymentId;
 
-    @Column(nullable = false)
-    private String orderNumber;
+    @Column(nullable = false, unique = true)
+    private String orderId;
 
     @Column(nullable = false)
     private BigDecimal amount;
@@ -44,9 +46,9 @@ public class Payment {
     private String errorCode;
 
     @CreationTimestamp
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @UpdateTimestamp
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
 }

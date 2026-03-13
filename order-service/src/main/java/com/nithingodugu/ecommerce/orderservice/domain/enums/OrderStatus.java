@@ -2,11 +2,9 @@ package com.nithingodugu.ecommerce.orderservice.domain.enums;
 
 public enum OrderStatus {
     CREATED,
-    PAYMENT_PENDING,
-    PAYMENT_FAILED,
+    PENDING,
+    FAILED,
     CONFIRMED,
-    EXPIRED,
     CANCELLED,
-
 
 }

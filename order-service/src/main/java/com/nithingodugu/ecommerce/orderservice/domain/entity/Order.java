@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,11 +31,11 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false, updatable = false, length = 36)
-    private String orderNumber;
+    @Column(unique = true, nullable = false, updatable = false)
+    private String orderId;
 
     @Column(nullable = false)
-    private UUID userId;
+    private String userId;
 
     @Enumerated(EnumType.STRING)
     private OrderStatus orderStatus;
@@ -46,10 +47,10 @@ public class Order {
     private List<OrderItem> orderItems = new ArrayList<>();
 
     @CreationTimestamp
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @UpdateTimestamp
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     public void addOrderItem(OrderItem item){
         item.setOrder(this);

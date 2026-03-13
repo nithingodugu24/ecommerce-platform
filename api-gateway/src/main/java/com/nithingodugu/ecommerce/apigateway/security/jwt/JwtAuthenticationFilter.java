@@ -15,10 +15,13 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 
 @Component
-@RequiredArgsConstructor
 public class JwtAuthenticationFilter implements GlobalFilter {
 
     private final JwtUtil jwtUtil;
+
+    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
 
     @Value("${security.public-endpoints}")
     private List<String> publicEndpoints;
@@ -26,6 +29,7 @@ public class JwtAuthenticationFilter implements GlobalFilter {
     private boolean isPublicPath(String path){
         return publicEndpoints.stream().anyMatch(path::startsWith);
     }
+
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {

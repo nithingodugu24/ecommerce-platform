@@ -8,12 +8,12 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/internal/orders")
-public class InternalOrderController {
+public class OrderInternalController {
 
     private final OrderService orderService;
 
-    @GetMapping("/{orderNumber}")
-    public OrderDetailsResponse orderDetails(@PathVariable String orderNumber){
-        return orderService.getInternalOrderDetails(orderNumber);
+    @GetMapping("/{orderId}")
+    public OrderDetailsResponse orderDetails(@PathVariable String orderId){
+        return orderService.getInternalOrderDetails(orderId);
     }
 }

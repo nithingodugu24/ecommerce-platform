@@ -14,6 +14,6 @@ import java.util.UUID;
 public class OrderCancelledEvent {
 
     private String orderId;
-
+    private BigDecimal amountPaid;
     private List<OrderItemEvent> items;
 }

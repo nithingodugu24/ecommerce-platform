@@ -12,9 +12,6 @@ public record CreateOrderRequest(
 
         @NotEmpty(message = "Item list cannot be empty")
         @Valid
-        List<OrderItemRequest> items,
-
-        @NotBlank(message = "Payment token is required")
-        String paymentToken
+        List<OrderItemRequest> items
 ) {
 }
