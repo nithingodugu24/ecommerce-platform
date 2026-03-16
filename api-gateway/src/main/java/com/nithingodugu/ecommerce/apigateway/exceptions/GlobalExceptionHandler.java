@@ -6,8 +6,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.reactive.resource.NoResourceFoundException;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.file.AccessDeniedException;
 import java.time.Instant;
@@ -16,38 +16,40 @@ import java.time.Instant;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiError> handleNoResource(NoResourceFoundException ex) {
+
+        ApiError error = ApiError.builder()
+                .status(HttpStatus.NOT_FOUND.value())
+                .message("Not Found")
+                .timestamp(Instant.now())
+                .build();
+
+        return ResponseEntity.status(error.status()).body(error);
+    }
 
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ApiError(
-                        403,
-                        ex.getMessage(),
-                        Instant.now()
-                ));
-    }
 
+        ApiError error = ApiError.builder()
+                .status(HttpStatus.FORBIDDEN.value())
+                .message(ex.getMessage())
+                .timestamp(Instant.now())
+                .build();
+
+        return ResponseEntity.status(error.status()).body(error);
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex){
+//        log.info(ex.toString());
+        ApiError error = ApiError.builder()
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .message(ex.getMessage())
+                .timestamp(Instant.now())
+                .build();
 
-        if (ex instanceof ResponseStatusException rse) {
-            return ResponseEntity.status(rse.getStatusCode())
-                    .body(new ApiError(
-                            rse.getStatusCode().value(),
-                            rse.getReason(),
-                            Instant.now()
-                    ));
-        }
-
-        log.error("Unexpected error", ex);
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ApiError(
-                        500,
-                        "Internal server error",
-                        Instant.now()
-                ));
+        return ResponseEntity.status(error.status()).body(error);
     }
 }
