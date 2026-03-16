@@ -1,7 +1,10 @@
-package com.nithingodugu.ecommerce.apigateway.security.jwt;
+package com.nithingodugu.ecommerce.apigateway.filter;
 
+import com.nithingodugu.ecommerce.apigateway.security.jwt.JwtUtil;
 import io.jsonwebtoken.Claims;
-import lombok.RequiredArgsConstructor;
+import net.logstash.logback.argument.StructuredArguments;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -18,6 +21,8 @@ import java.util.List;
 public class JwtAuthenticationFilter implements GlobalFilter {
 
     private final JwtUtil jwtUtil;
+    private static final Logger log = LoggerFactory.getLogger(LoggingFilter.class);
+
 
     public JwtAuthenticationFilter(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
@@ -35,6 +40,7 @@ public class JwtAuthenticationFilter implements GlobalFilter {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 
         String path = exchange.getRequest().getURI().getPath();
+        String requestId = exchange.getRequest().getHeaders().getFirst("X-Request-ID");
         
         if(isPublicPath(path)){
             return chain.filter(exchange);
@@ -57,13 +63,18 @@ public class JwtAuthenticationFilter implements GlobalFilter {
             String userId = claims.getSubject();
             String userRole = claims.get("role").toString();
 
-            /* Check if it is an admin route, if it is then check role
-             * admin routes have /admin in the paths */
+            // Check if it is an admin route, if it is then check role
+            if (path.startsWith("/admin") && !userRole.equalsIgnoreCase("ADMIN")){
+                log.warn(
+                        "Unauthorized admin access attempt",
+                        StructuredArguments.kv("requestId", requestId),
+                        StructuredArguments.kv("userId", userId),
+                        StructuredArguments.kv("role", userRole)
 
-//            if (path.contains("/admin") && !userRole.equalsIgnoreCase("admin")){
-//                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-//                return exchange.getResponse().setComplete();
-//            }
+                        );
+                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                return exchange.getResponse().setComplete();
+            }
 
             ServerHttpRequest mutatedRequest = exchange.getRequest()
                     .mutate()
@@ -75,6 +86,11 @@ public class JwtAuthenticationFilter implements GlobalFilter {
             return chain.filter(exchange.mutate().request(mutatedRequest).build());
 
         }catch (Exception ex){
+            log.error(
+                    "JWT validation failed",
+                    StructuredArguments.kv("requestId", requestId),
+                    StructuredArguments.kv("error", ex.getMessage())
+            );
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
