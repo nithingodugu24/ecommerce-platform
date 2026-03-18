@@ -5,6 +5,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import net.logstash.logback.argument.StructuredArguments;
+import org.slf4j.MDC;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -30,27 +32,40 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
         String userIdHeader = request.getHeader("X-USER-ID");
         String userRole = request.getHeader("X-USER-ROLE");
 
-        if (userIdHeader != null && userRole != null){
-            List<GrantedAuthority> authorities= List.of(
-                    new SimpleGrantedAuthority("ROLE_" + userRole)
-            );
-           try {
-               UUID userId = UUID.fromString(userIdHeader);
+        try {
+            if (userIdHeader != null && userRole != null) {
+                List<GrantedAuthority> authorities = List.of(
+                        new SimpleGrantedAuthority("ROLE_" + userRole)
+                );
 
-               UsernamePasswordAuthenticationToken auth =
-                       new UsernamePasswordAuthenticationToken(
-                               userId,
-                               null,
-                               authorities
-                       );
+                UUID userId = UUID.fromString(userIdHeader);
 
-               SecurityContextHolder.getContext().setAuthentication(auth);
-           } catch (Exception e) {
-               log.info("Error parsig uuid, {}", e.getMessage());
-           }
+                UsernamePasswordAuthenticationToken auth =
+                        new UsernamePasswordAuthenticationToken(
+                                userId,
+                                null,
+                                authorities
+                        );
+
+                SecurityContextHolder.getContext().setAuthentication(auth);
+
+                MDC.put("userId", userId.toString());
+                MDC.put("userRole", userRole);
+            }
+
+            filterChain.doFilter(request, response);
+
+
+        } catch (Exception e) {
+
+            log.warn("Invalid userId in header",
+                    StructuredArguments.kv("userIdHeader", userIdHeader),
+                    StructuredArguments.kv("error", e.getMessage())
+                    );
+            filterChain.doFilter(request, response);
+        } finally {
+            MDC.remove("userId");
+            MDC.remove("userRole");
         }
-
-        filterChain.doFilter(request, response);
-
     }
 }

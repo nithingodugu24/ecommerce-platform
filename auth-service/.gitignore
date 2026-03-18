@@ -35,3 +35,4 @@ build/
 ### extra ###
 *.log
 .env
+logs/

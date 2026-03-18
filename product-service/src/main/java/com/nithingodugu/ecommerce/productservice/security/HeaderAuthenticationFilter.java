@@ -5,6 +5,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import net.logstash.logback.argument.StructuredArguments;
+import org.slf4j.MDC;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -31,22 +33,27 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
         String userRole = request.getHeader("X-USER-ROLE");
 
         if (userId != null && userRole != null){
-            List<GrantedAuthority> authorities= List.of(
+            List<GrantedAuthority> authorities = List.of(
                     new SimpleGrantedAuthority("ROLE_" + userRole)
             );
 
-           UsernamePasswordAuthenticationToken auth =
-                   new UsernamePasswordAuthenticationToken(
-                           userId,
-                           null,
-                           authorities
-                   );
+            UsernamePasswordAuthenticationToken auth =
+                    new UsernamePasswordAuthenticationToken(
+                            userId,
+                            null,
+                            authorities
+                    );
 
-           SecurityContextHolder.getContext().setAuthentication(auth);
+            SecurityContextHolder.getContext().setAuthentication(auth);
 
+            MDC.put("userId", userId.toString());
+            MDC.put("userRole", userRole);
         }
 
         filterChain.doFilter(request, response);
+
+        MDC.remove("userId");
+        MDC.remove("userRole");
 
     }
 }
