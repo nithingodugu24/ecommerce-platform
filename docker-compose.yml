@@ -138,6 +138,12 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       EUREKA_SERVICE_URL: discovery-service:8761
       JWT_SECRET: ${JWT_SECRET}
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+
     networks:
       - ecom-network
 
@@ -161,6 +167,12 @@ services:
       EUREKA_SERVICE_URL: discovery-service:8761
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+
     networks:
       - ecom-network
 
@@ -241,7 +253,6 @@ services:
       options:
         fluentd-address: "localhost:24224"
         fluentd-async: "true"
-        tag: "api-gateway"
 
     ports:
       - "8080:8080"
