@@ -6,12 +6,16 @@ import com.nithingodugu.ecommerce.authservice.dto.UserProfileResponse;
 import com.nithingodugu.ecommerce.authservice.repository.UserRepository;
 import com.nithingodugu.ecommerce.authservice.service.AdminUserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AdminUserServiceImpl implements AdminUserService {
 
     private final UserRepository userRepository;
@@ -19,6 +23,13 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     public Page<UserProfileResponse> getAllUsers(Pageable pageable) {
+
+        log.info("Admin action",
+                kv("action", "GET_USERS"),
+                kv("page", pageable.getPageNumber()),
+                kv("size", pageable.getPageSize())
+
+        );
 
         Page<User> users = userRepository.findAll(pageable);
         return users.map(mappers::mapUserToUserProfileResponse);
