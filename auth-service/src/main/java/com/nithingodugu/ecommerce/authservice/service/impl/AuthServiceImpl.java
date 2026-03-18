@@ -13,6 +13,7 @@ import com.nithingodugu.ecommerce.authservice.repository.RefreshTokenRepository;
 import com.nithingodugu.ecommerce.authservice.repository.UserRepository;
 import com.nithingodugu.ecommerce.authservice.security.jwt.JwtUtil;
 import com.nithingodugu.ecommerce.authservice.service.AuthService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -22,13 +23,14 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import java.time.Instant;
 import java.util.UUID;
+import static net.logstash.logback.argument.StructuredArguments.kv;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
+@Slf4j
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
@@ -44,7 +46,15 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public RegisterResponse register(RegisterRequest request) {
 
+        log.info("Register attempt", kv("email", request.email()));
+
         if(userRepository.existsByEmail(request.email())){
+
+            log.warn("Register Failed",
+                    kv("email", request.email()),
+                    kv("reason", "ACCOUNT_ALREADY_EXISTS")
+            );
+
             throw new IllegalArgumentException("Email already exists");
         }
 
@@ -58,21 +68,53 @@ public class AuthServiceImpl implements AuthService {
 
         userRepository.save(user);
 
+        log.info("Register success",
+                kv("userId", user.getId()),
+                kv("role", user.getRole())
+        );
+
         return mapToResponse(user);
     }
 
     @Override
     public AuthTokens login(LoginRequest request){
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password())
-        );
+        log.info("Login attempt", kv("email", request.email()));
+
+        Authentication authentication;
+
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.email(),
+                            request.password()
+                    )
+            );
+        }catch (Exception ex){
+            log.warn("Login Failed",
+                    kv("email", request.email()),
+                    kv("reason", "INVALID_CREDENTIALS")
+            );
+
+            throw ex;
+        }
 
         User user = (User) authentication.getPrincipal();
 
         if(user.getStatus() != UserStatus.ACTIVE){
+
+            log.warn("Login Failed",
+                    kv("email", request.email()),
+                    kv("reason", "ACCOUNT_INACTIVE")
+            );
+
             throw new DisabledException(ACCOUNT_INACTIVE_MSG);
         }
+
+        log.info("Login success",
+                kv("userId", user.getId()),
+                kv("role", user.getRole())
+        );
 
         String accessToken = jwtUtil.generateAccessToken(
                 user.getId(), user.getRole().name()
@@ -96,6 +138,9 @@ public class AuthServiceImpl implements AuthService {
 
         refreshTokenRepository.save(refreshToken);
 
+        log.info("Tokens issued",
+                kv("userId", user.getId())
+        );
 
         return new AuthTokens(
                 user.getId(),
@@ -110,8 +155,14 @@ public class AuthServiceImpl implements AuthService {
 
     public AuthTokens refresh(String rawRefreshToken){
 
+        log.debug("Refresh request");
+
         String[] tokenParts = rawRefreshToken.split("\\.");
         if(tokenParts.length != 2){
+
+            log.warn("Refresh failed",
+                    kv("reason", "INVALID_FORMAT"));
+
             throw new BadCredentialsException(INVALID_REFRESH_TOKEN_MSG);
         }
 
@@ -120,14 +171,37 @@ public class AuthServiceImpl implements AuthService {
 
         RefreshToken storedToken = refreshTokenRepository
                 .findByTokenIdAndRevokedFalse(tokenId)
-                .orElseThrow(() -> new BadCredentialsException(INVALID_REFRESH_TOKEN_MSG));
+                .orElseThrow(() -> {
+                    log.warn("Refresh failed",
+                            kv("tokenId", tokenId),
+                            kv("reason", "TOKEN_NOT_FOUND"));
+                    return new BadCredentialsException(INVALID_REFRESH_TOKEN_MSG);
+                });
 
-        if(
-                storedToken.isRevoked()
-                        || storedToken.getExpiry().isBefore(Instant.now())
-                        || !passwordEncoder.matches(tokenSecret, storedToken.getTokenHash())
+        if(storedToken.isRevoked()){
 
-        ){
+            log.warn("Refresh failed",
+                    kv("tokenId", tokenId),
+                    kv("reason", "TOKEN_REVOKED"));
+
+            throw new BadCredentialsException(INVALID_REFRESH_TOKEN_MSG);
+        }
+
+        if(storedToken.getExpiry().isBefore(Instant.now())){
+
+            log.warn("Refresh failed",
+                    kv("tokenId", tokenId),
+                    kv("reason", "TOKEN_EXPIRED"));
+
+            throw new BadCredentialsException(INVALID_REFRESH_TOKEN_MSG);
+        }
+
+        if(!passwordEncoder.matches(tokenSecret, storedToken.getTokenHash())){
+
+            log.warn("Refresh failed",
+                    kv("tokenId", tokenId),
+                    kv("reason", "TOKEN_MISMATCH"));
+
             throw new BadCredentialsException(INVALID_REFRESH_TOKEN_MSG);
         }
 
@@ -158,6 +232,12 @@ public class AuthServiceImpl implements AuthService {
         );
         refreshTokenRepository.save(newRefreshToken);
 
+        log.info("Refresh success",
+                kv("userId", user.getId()),
+                kv("oldTokenId", tokenId),
+                kv("newTokenId", newTokenId)
+        );
+
         return new AuthTokens(
                 user.getId(),
                 user.getEmail(),
@@ -169,12 +249,16 @@ public class AuthServiceImpl implements AuthService {
         );
     }
 
-
     @Override
     public void logout(String refreshToken) {
 
+        log.debug("Logout attempt");
+
         String[] tokenParts = refreshToken.split("\\.");
         if(tokenParts.length != 2){
+
+            log.warn("Logout failed", kv("reason", "INVALID_FORMAT"));
+
             throw new BadCredentialsException(INVALID_REFRESH_TOKEN_MSG);
         }
 
@@ -182,10 +266,19 @@ public class AuthServiceImpl implements AuthService {
 
         RefreshToken token = refreshTokenRepository
                 .findByTokenIdAndRevokedFalse(tokenId)
-                .orElseThrow(() -> new BadCredentialsException(INVALID_REFRESH_TOKEN_MSG));
+                .orElseThrow(() -> {
+                    log.warn("Logout failed",
+                            kv("tokenId", tokenId),
+                            kv("reason", "TOKEN_NOT_FOUND"));
+                    return new BadCredentialsException(INVALID_REFRESH_TOKEN_MSG);
+                });
 
         token.revoke();
         refreshTokenRepository.save(token);
+
+        log.info("Logout success",
+                kv("userId", token.getUser().getId()),
+                kv("tokenId", tokenId));
     }
 
     private RegisterResponse mapToResponse(User user){
