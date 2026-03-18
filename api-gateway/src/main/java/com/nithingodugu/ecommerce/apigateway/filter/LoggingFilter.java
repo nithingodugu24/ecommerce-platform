@@ -95,7 +95,7 @@ public class LoggingFilter implements GlobalFilter, Ordered {
                 StructuredArguments.kv("method",      method),
                 StructuredArguments.kv("path",        path),
                 StructuredArguments.kv("status",      status),
-                StructuredArguments.kv("duration_ms", duration),
+                StructuredArguments.kv("durationMs", duration),
                 StructuredArguments.kv("requestId",   requestId),
                 StructuredArguments.kv("upstream",    upstreamService)
         };
@@ -112,7 +112,7 @@ public class LoggingFilter implements GlobalFilter, Ordered {
             log.warn("Slow request detected",
                     StructuredArguments.kv("method",      method),
                     StructuredArguments.kv("path",        path),
-                    StructuredArguments.kv("duration_ms", duration),
+                    StructuredArguments.kv("durationMs", duration),
                     StructuredArguments.kv("requestId",   requestId)
             );
         }
@@ -130,7 +130,7 @@ public class LoggingFilter implements GlobalFilter, Ordered {
         log.error("Request failed",
                 StructuredArguments.kv("method",      exchange.getRequest().getMethod().name()),
                 StructuredArguments.kv("path",        exchange.getRequest().getPath().value()),
-                StructuredArguments.kv("duration_ms", duration),
+                StructuredArguments.kv("durationMs", duration),
                 StructuredArguments.kv("requestId",   requestId),
                 StructuredArguments.kv("upstream",    upstreamService),
                 StructuredArguments.kv("error",       error.getMessage()),

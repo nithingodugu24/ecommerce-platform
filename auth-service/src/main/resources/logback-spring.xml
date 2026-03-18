@@ -52,17 +52,16 @@
     </root>
 
     <!-- Eureka exclude -->
-    <logger name="com.netflix.discovery" level="WARN"/>
-    <logger name="com.netflix.eureka"    level="WARN"/>
-
-    <!-- SPG internal routing debug exclude -->
-    <logger name="org.springframework.cloud.gateway" level="WARN"/>
-
-    <!-- Reactor Netty connection pool chatter -->
-    <logger name="reactor.netty" level="WARN"/>
-
-    <!-- Spring Security filter chain - logs every request match -->
-    <logger name="org.springframework.security" level="WARN"/>
+    <!--  exclude to reduce noice-->
+    <logger name="org.hibernate.SQL"                          level="WARN"/>
+    <logger name="org.hibernate.orm.jdbc.bind"               level="WARN"/>
+    <logger name="org.springframework.web"                    level="WARN"/>
+    <logger name="org.springframework.security"              level="WARN"/>
+    <logger name="org.springframework.cache"                  level="WARN"/>
+    <logger name="com.netflix.discovery"                      level="WARN"/>
+    <logger name="com.netflix.eureka"                         level="WARN"/>
+    <logger name="org.apache.kafka"                           level="WARN"/>
+    <logger name="org.springframework.kafka"                  level="WARN"/>
 
     <!-- dev -->
 <!--    <logger name="com.nithingodugu.ecommerce" level="DEBUG"/>-->
