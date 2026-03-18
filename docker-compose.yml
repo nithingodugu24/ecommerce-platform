@@ -46,6 +46,70 @@ services:
     networks:
       - ecom-network
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: elasticsearch
+    environment:
+      - node.name=es01
+      - cluster.name=elk-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=false          # for dev
+      - xpack.security.http.ssl.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - ecom-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - XPACK_SECURITY_ENABLED=false
+      - SERVER_NAME=kibana
+    ports:
+      - "5601:5601"
+    networks:
+      - ecom-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:5601/api/status | grep -q '\"overall\":{\"level\":\"available\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+
+  fluent-bit:
+    image: fluent/fluent-bit:3.1
+    container_name: fluent-bit
+    volumes:
+      - ./fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf:ro
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"  
+      - "2020:2020"
+    networks:
+      - ecom-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
 
   discovery-service:
     build:
@@ -165,10 +229,20 @@ services:
     depends_on:
       discovery-service:
         condition: service_started
+      fluent-bit:
+        condition: service_started
+
     environment:
       SERVER_PORT: 8080
       JWT_SECRET: ${JWT_SECRET}
       EUREKA_SERVICE_URL: discovery-service:8761
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: "api-gateway"
+
     ports:
       - "8080:8080"
     networks:
@@ -177,6 +251,7 @@ services:
 volumes:
   pgdata:
   redis-data:
+  esdata:
 
 networks:
   ecom-network:
