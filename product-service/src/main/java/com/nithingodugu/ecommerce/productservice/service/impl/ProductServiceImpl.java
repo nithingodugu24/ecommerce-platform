@@ -32,6 +32,8 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -57,6 +59,12 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public ProductResponseDto createProduct(CreateProductRequestDto request) {
 
+        log.info("Create product attempt",
+                kv("name", request.name()),
+                kv("category", request.category()),
+                kv("price", request.price())
+        );
+
         String productId = idGenerator.generateProductId();
 
         Product product = Product.builder()
@@ -70,6 +78,10 @@ public class ProductServiceImpl implements ProductService {
 
         productRepository.save(product);
 
+        log.info("Product persisted",
+                kv("productId", productId)
+        );
+
         ProductCreatedEvent event = new ProductCreatedEvent(
                 product.getProductId(),
                 product.getName(),
@@ -81,6 +93,12 @@ public class ProductServiceImpl implements ProductService {
         try {
             payload = objectMapper.writeValueAsString(event);
         }catch (JsonProcessingException ex){
+
+            log.error("Product event serialization failed",
+                    kv("productId", productId),
+                    kv("error", ex.getMessage()),
+                    ex);
+
             throw new RuntimeException("Failed to serialize ProductCreated event", ex);
         }
 
@@ -92,6 +110,12 @@ public class ProductServiceImpl implements ProductService {
         outbox.setStatus(OutboxStatus.PENDING);
 
         outboxEventRepository.save(outbox);
+
+        log.info("Product created successfully",
+                kv("productId", productId),
+                kv("eventId", outbox.getEventId()),
+                kv("topic", KafkaTopics.PRODUCT_CREATED)
+        );
 
         return mapToResponse(product);
     }
@@ -106,8 +130,16 @@ public class ProductServiceImpl implements ProductService {
     )
     public ProductResponseDto editProduct(String productId, EditProductRequestDto request) {
 
+        log.info("Edit product attempt",
+                kv("productId", productId));
+
         Product product = productRepository.findByProductId(productId)
-                .orElseThrow(() -> new ProductNotFoundException("product not found"));
+                .orElseThrow(() -> {
+                    log.warn("Edit product failed",
+                            kv("reason", "PRODUCT_NOT_FOUND"),
+                            kv("productId", productId));
+                    return new ProductNotFoundException("Product not found");
+                });
 
         product.setName(request.name());
         product.setDescription(request.description());
@@ -117,6 +149,9 @@ public class ProductServiceImpl implements ProductService {
 
         product = productRepository.save(product);
 
+        log.info("Edit product success",
+                kv("productId", productId));
+
         return mapToResponse(product);
 
     }
@@ -124,8 +159,20 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Cacheable(cacheNames = PRODUCT_CACHE, key = "#productId")
     public ProductResponseDto getProductById(String productId) {
+
+        log.debug("Get product attempt",
+                kv("productId", productId));
+
         Product product = productRepository.findByProductId(productId)
-                .orElseThrow(() -> new ProductNotFoundException("product not found"));
+                .orElseThrow(() -> {
+                    log.warn("Get product failed",
+                            kv("reason", "PRODUCT_NOT_FOUND"),
+                            kv("productId", productId));
+                    return new ProductNotFoundException("product not found");
+                });
+
+        log.debug("Get product success",
+                kv("productId", productId));
 
         return mapToResponse(product);
     }
@@ -138,22 +185,41 @@ public class ProductServiceImpl implements ProductService {
                     @CacheEvict(cacheNames = PRODUCT_SEARCH_CACHE, allEntries = true)
             }
     )
-
-
     public void deleteProduct(String productId) {
-        Product product = productRepository.findByProductId(productId)
-                .orElseThrow(() -> new ProductNotFoundException("product not found"));
 
+        log.info("Delete product attempt",
+                kv("productId", productId));
+
+        Product product = productRepository.findByProductId(productId)
+                .orElseThrow(() -> {
+                    log.warn("Delete product failed",
+                            kv("reason", "PRODUCT_NOT_FOUND"),
+                            kv("productId", productId));
+                    return new ProductNotFoundException("product not found");
+                });
 
         productRepository.delete(product);
+
+        log.info("Delete product success",
+                kv("productId", productId));
     }
 
     @Override
     @Cacheable(cacheNames = PRODUCT_PAGE_CACHE, key = "#pageable.pageNumber + '_' + #pageable.pageSize + '_' + #pageable.sort")
     public PageResponse<ProductResponseDto> getProducts(Pageable pageable) {
 
+        log.debug("Get products attempt",
+                kv("page", pageable.getPageNumber()),
+                kv("size", pageable.getPageSize()));
+
         Page<Product> products = productRepository.findAll(pageable);
+
         Page<ProductResponseDto> dtoPage = products.map(this::mapToResponse);
+
+        log.debug("Get products success",
+                kv("page", pageable.getPageNumber()),
+                kv("size", pageable.getPageSize()),
+                kv("resultCount", products.getNumberOfElements()));
 
         return new PageResponse<>(dtoPage);
 
@@ -163,14 +229,27 @@ public class ProductServiceImpl implements ProductService {
     @Cacheable(cacheNames = PRODUCT_SEARCH_CACHE, key = "#name + '_' + #pageable.pageNumber + '_' + #pageable.pageSize + '_' + #pageable.sort")
     public PageResponse<ProductResponseDto> getProductsByName(String name, Pageable pageable) {
 
-       Page<Product> products = productRepository.findByNameContainingIgnoreCaseAndActiveTrue(name, pageable);
+        log.debug("Search products attempt",
+                kv("name", name),
+                kv("page", pageable.getPageNumber()),
+                kv("size", pageable.getPageSize()));
+
+        Page<Product> products = productRepository.findByNameContainingIgnoreCaseAndActiveTrue(name, pageable);
+
         Page<ProductResponseDto> dtoPage = products.map(this::mapToResponse);
+
+        log.debug("Search products success",
+                kv("name", name),
+                kv("resultCount", products.getNumberOfElements()));
 
        return new PageResponse<>(dtoPage);
     }
 
     @Override
     public ProductsPricingResponse quote(ProductsPricingRequest request) {
+
+        log.info("Pricing quote attempt",
+                kv("itemsCount", request.items().size()));
 
         Map<String, Integer> requestedQtyMap = request.items().stream()
                 .collect(Collectors.toMap(
@@ -183,6 +262,12 @@ public class ProductServiceImpl implements ProductService {
         List<Product> products = productRepository.findByProductIdIn(requestedQtyMap.keySet());
 
         if (products.size() != requestedQtyMap.size()) {
+
+            log.warn("Pricing quote failed",
+                    kv("reason", "PRODUCTS_NOT_FOUND"),
+                    kv("requestedCount", requestedQtyMap.size()),
+                    kv("foundCount", products.size()));
+
             return new ProductsPricingResponse(
                     false,
                     "One or more products not found",
@@ -197,6 +282,11 @@ public class ProductServiceImpl implements ProductService {
 
         for (Product product : products) {
             if (!product.getActive()) {
+
+                log.warn("Pricing quote failed",
+                        kv("reason", "PRODUCTS_INACTIVE")
+                );
+
                 return new ProductsPricingResponse(
                         false,
                         "Product inactive: " + product.getProductId(),
@@ -222,6 +312,9 @@ public class ProductServiceImpl implements ProductService {
                     )
             );
         }
+
+        log.info("Pricing quote success");
+
         return new ProductsPricingResponse(
                 true,
                 "success",

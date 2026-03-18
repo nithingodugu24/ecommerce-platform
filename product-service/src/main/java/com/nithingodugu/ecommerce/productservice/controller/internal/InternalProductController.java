@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Slf4j
 @RestController
 @RequestMapping("/internal/products")
 @AllArgsConstructor
@@ -22,7 +21,6 @@ public class InternalProductController {
     public ProductsPricingResponse quote(
             @RequestBody ProductsPricingRequest request
     ){
-        log.info("new internal request");
         return productService.quote(request);
     }
 }
