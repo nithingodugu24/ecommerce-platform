@@ -10,6 +10,9 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
 
+  reactor:
+    context-propagation: auto
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -45,4 +48,18 @@ eureka:
     fetch-registry: false
     service-url:
       defaultZone: http://${EUREKA_SERVICE_URL}/eureka
+
+management:
+  otlp:
+    tracing:
+      endpoint: http://${JAEGER_SERVICE_URL}/v1/traces
+    metrics:
+      export:
+        enabled: false
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0
+    propagation:
+      type: w3c
 

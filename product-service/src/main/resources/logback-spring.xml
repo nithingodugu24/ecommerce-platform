@@ -6,9 +6,8 @@
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-
+            <includeMdc>true</includeMdc>
             <customFields>{"service":"${SERVICE_NAME}","env":"${ENV}"}</customFields>
-
             <fieldNames>
                 <timestamp>timestamp</timestamp>
                 <message>message</message>
