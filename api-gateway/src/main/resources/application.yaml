@@ -43,6 +43,8 @@ spring:
           predicates:
             - Path=/payments/**
 
+  reactor:
+    context-propagation: auto
 security:
   public-endpoints: /auth,/products,/payments/webhook
 
@@ -53,3 +55,12 @@ eureka:
 
 jwt:
   secret: ${JWT_SECRET}
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0  #dev
+  otlp:
+    tracing:
+      endpoint: http://${JAEGER_SERVICE_URL}/v1/traces
+
