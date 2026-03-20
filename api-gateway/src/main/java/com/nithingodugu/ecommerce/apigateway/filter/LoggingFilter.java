@@ -49,17 +49,17 @@ public class LoggingFilter implements GlobalFilter, Ordered {
         String upstreamService = resolveUpstreamService(route);
 
         String finalRequestId = requestId;
-        ServerHttpRequest mutatedRequest = request.mutate()
-                .header(REQUEST_ID_HEADER, requestId)
-                .header(UPSTREAM_HEADER, upstreamService)
-                .build();
 
+        ServerHttpRequest mutatedRequest = request.mutate()
+                .headers(headers -> {
+                    headers.set(REQUEST_ID_HEADER, finalRequestId);
+                    headers.set(UPSTREAM_HEADER, upstreamService);
+                })
+                .build();
 
         ServerWebExchange mutatedExchange = exchange.mutate()
                 .request(mutatedRequest)
                 .build();
-
-
 
         log.info("Incoming request",
                 StructuredArguments.kv("method",     request.getMethod().name()),
@@ -69,15 +69,11 @@ public class LoggingFilter implements GlobalFilter, Ordered {
                 StructuredArguments.kv("clientIp",   getClientIp(request))
         );
 
-
-        mutatedExchange.getResponse().getHeaders().add(REQUEST_ID_HEADER, requestId);
-
+//        mutatedExchange.getResponse().getHeaders().add(REQUEST_ID_HEADER, requestId);
 
         return chain.filter(mutatedExchange)
                 .doOnSuccess(v -> logResponse(mutatedExchange, finalRequestId, upstreamService, startTime))
                 .doOnError(error -> logError(mutatedExchange, finalRequestId, upstreamService, startTime, error));
-
-
     }
 
     private void logResponse(ServerWebExchange exchange,

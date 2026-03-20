@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -16,7 +17,7 @@ import static net.logstash.logback.argument.StructuredArguments.kv;
 
 @Slf4j
 @Component
-public class LoggingFilter extends OncePerRequestFilter {
+public class LoggingFilter extends OncePerRequestFilter implements Ordered {
 
     private static final String REQUEST_ID_HEADER = "X-Request-ID";
 
@@ -74,7 +75,12 @@ public class LoggingFilter extends OncePerRequestFilter {
             }
 
 
-            MDC.clear();
+            MDC.remove("requestId");
         }
+    }
+
+    @Override
+    public int getOrder() {
+        return Ordered.LOWEST_PRECEDENCE;
     }
 }
