@@ -69,7 +69,7 @@ public class LoggingFilter implements GlobalFilter, Ordered {
                 StructuredArguments.kv("clientIp",   getClientIp(request))
         );
 
-        mutatedExchange.getResponse().getHeaders().add(REQUEST_ID_HEADER, requestId);
+//        mutatedExchange.getResponse().getHeaders().add(REQUEST_ID_HEADER, requestId);
 
         return chain.filter(mutatedExchange)
                 .doOnSuccess(v -> logResponse(mutatedExchange, finalRequestId, upstreamService, startTime))
