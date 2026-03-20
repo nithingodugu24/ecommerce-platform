@@ -16,7 +16,7 @@
                 <levelValue>[ignore]</levelValue>
             </fieldNames>
         </encoder>
-    </appender>
+</appender>
 
 
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">

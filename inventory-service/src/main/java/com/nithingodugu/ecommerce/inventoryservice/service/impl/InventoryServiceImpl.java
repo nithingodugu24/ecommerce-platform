@@ -5,7 +5,6 @@ import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservation
 import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservationResponse;
 import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservationResult;
 import com.nithingodugu.ecommerce.common.event.OrderCancelledEvent;
-import com.nithingodugu.ecommerce.common.event.OrderItemEvent;
 import com.nithingodugu.ecommerce.common.event.ProductCreatedEvent;
 import com.nithingodugu.ecommerce.common.event.ProductDeletedEvent;
 import com.nithingodugu.ecommerce.inventoryservice.domain.entity.Inventory;
@@ -30,6 +29,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -42,6 +43,9 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional
     public InventoryReservationResponse reservation(InventoryReservationRequest request) {
 
+        log.info("Reservation attempt",
+                kv("orderId", request.orderId()));
+
         InventoryReservation reservation = new InventoryReservation();
 
         for (InventoryReservationItem item : request.items()) {
@@ -52,7 +56,9 @@ public class InventoryServiceImpl implements InventoryService {
             );
 
             if (updatedRows == 0) {
-                log.info("product outofstock");
+                log.warn("Reservation failed",
+                        kv("orderId", request.orderId()),
+                        kv("reason", "OUT_OF_STOCK_OR_NOT_FOUND"));
                 return new InventoryReservationResponse(
                         InventoryReservationResult.OUT_OF_STOCK,
                         "product out of stock or not found"
@@ -71,6 +77,10 @@ public class InventoryServiceImpl implements InventoryService {
 
         inventoryReservationRepository.save(reservation);
 
+        log.info("Reservation success",
+                kv("orderId", request.orderId()),
+                kv("reservationId", reservation.getId()));
+
         return new InventoryReservationResponse(
                 InventoryReservationResult.SUCCESS,
                 "Reserved successfully"
@@ -81,7 +91,15 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional
     public void handleProductCreated(ProductCreatedEvent event) {
 
+        log.info("Inventory create attempt",
+                kv("productId", event.getProductId()),
+                kv("quantity", event.getInitialQuantity()));
+
         if (inventoryRepository.findByProductId(event.getProductId()).isPresent()){
+
+            log.warn("Inventory create failed",
+                    kv("productId", event.getProductId()),
+                    kv("reason", "DUPLICATE_PRODUCT"));
             throw new DuplicateInventoryException(event.getProductId());
         }
 
@@ -90,33 +108,67 @@ public class InventoryServiceImpl implements InventoryService {
         inventory.setAvailableQuantity(event.getInitialQuantity());
         inventoryRepository.save(inventory);
 
-        log.info("Inventory created for productId={}", event.getProductId());
+        log.info("Inventory created",
+                kv("productId", event.getProductId()),
+                kv("inventoryId", inventory.getId()));
     }
 
     @Override
     @Transactional
     public void handleProductDeleted(ProductDeletedEvent event) {
 
+        log.info("Inventory delete (mark inactive) attempt",
+                kv("productId", event.getProductId())
+        );
+
         Inventory inventory = inventoryRepository
                 .findByProductId(event.getProductId())
-                .orElseThrow(()-> new InventoryNotFoundException(event.getProductId()));
+                .orElseThrow(() -> {
+                    log.warn("Inventory delete failed",
+                            kv("productId", event.getProductId()),
+                            kv("reason", "NOT_FOUND")
+                    );
+                    return new InventoryNotFoundException(event.getProductId());
+                });
 
-        if (inventory.getStatus() == InventoryStatus.INACTIVE) return;
+        if (inventory.getStatus() == InventoryStatus.INACTIVE) {
+            log.info("Inventory already inactive",
+                    kv("productId", event.getProductId())
+            );
+            return;
+        }
 
         inventory.setStatus(InventoryStatus.INACTIVE);
 
-        log.info("Marking inventory Inactive for productId={}", event.getProductId());
+        log.info("Inventory marked inactive",
+                kv("productId", event.getProductId())
+        );
     }
 
     @Override
     @Transactional
-    public void processOrderCancelled(OrderCancelledEvent event){
+    public void processOrderCancelled(OrderCancelledEvent event) {
+
+        log.info("Order cancel processing",
+                kv("orderId", event.getOrderId())
+        );
 
         InventoryReservation reservation = inventoryReservationRepository
                 .findByOrderId(event.getOrderId())
-                .orElseThrow(() -> new ReservationNotFoundException(event.getOrderId()));
+                .orElseThrow(() -> {
+                    log.warn("Order cancel failed",
+                            kv("orderId", event.getOrderId()),
+                            kv("reason", "RESERVATION_NOT_FOUND")
+                    );
+                    return new ReservationNotFoundException(event.getOrderId());
+                });
 
-        if (reservation.getStatus() == ReservationStatus.RELEASED){
+        if (reservation.getStatus() == ReservationStatus.RELEASED) {
+
+            log.warn("Duplicate release attempt",
+                    kv("orderId", event.getOrderId())
+            );
+
             throw new DuplicateReleaseException(event.getOrderId());
         }
 
@@ -130,33 +182,56 @@ public class InventoryServiceImpl implements InventoryService {
                 .collect(Collectors.toMap(Inventory::getProductId, i -> i));
 
         for (ReservationItem item : reservation.getItems()) {
+
             Inventory inventory = inventoryMap.get(item.getProductId());
 
             if (inventory == null) {
-                log.error("Inventory not found for productId: {}", item.getProductId());
-//                throw new InventoryNotFoundException(item.getProductId());
+                log.error("Inventory missing during release",
+                        kv("productId", item.getProductId()),
+                        kv("orderId", event.getOrderId())
+                );
+                continue;
             }
 
-            int updated = inventoryRepository.releaseStock(item.getProductId(), item.getQuantity());
+            int updated = inventoryRepository.releaseStock(
+                    item.getProductId(),
+                    item.getQuantity()
+            );
 
             if (updated == 0) {
-                log.error("Failed to release stock for productId: {} — reservedQty may be insufficient",
-                        item.getProductId());
-//                throw new InventoryReleaseException(event.getOrderId());
+                log.error("Stock release failed",
+                        kv("productId", item.getProductId()),
+                        kv("quantity", item.getQuantity()),
+                        kv("orderId", event.getOrderId()),
+                        kv("reason", "INSUFFICIENT_RESERVED")
+                );
             }
         }
 
         reservation.setStatus(ReservationStatus.RELEASED);
         inventoryReservationRepository.save(reservation);
 
+        log.info("Order cancel processed",
+                kv("orderId", event.getOrderId())
+        );
     }
-
 
     @Override
     public InventoryResponseDto getInventory(String productId) {
+
+        log.debug("Get inventory",
+                kv("productId", productId)
+        );
+
         Inventory inventory = inventoryRepository
                 .findByProductId(productId)
-                .orElseThrow(()-> new InventoryNotFoundException(productId));
+                .orElseThrow(() -> {
+                    log.warn("Inventory fetch failed",
+                            kv("productId", productId),
+                            kv("reason", "NOT_FOUND")
+                    );
+                    return new InventoryNotFoundException(productId);
+                });
 
         return mapToResponse(inventory);
     }
@@ -164,11 +239,28 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional
     public InventoryResponseDto updateInventory(String productId, InventoryUpdateRequestDto request){
+
+        log.info("Update inventory attempt",
+                kv("productId", productId),
+                kv("newQuantity", request.availableQuantity())
+        );
+
         Inventory inventory = inventoryRepository
                 .findByProductId(productId)
-                .orElseThrow(()-> new InventoryNotFoundException(productId));
+                .orElseThrow(() -> {
+                    log.warn("Update inventory failed",
+                            kv("productId", productId),
+                            kv("reason", "NOT_FOUND")
+                    );
+                    return new InventoryNotFoundException(productId);
+                });
 
         inventory.setAvailableQuantity(request.availableQuantity());
+
+        log.info("Inventory updated",
+                kv("productId", productId),
+                kv("availableQuantity", inventory.getAvailableQuantity())
+        );
 
         return mapToResponse(inventory);
     }
