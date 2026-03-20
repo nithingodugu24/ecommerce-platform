@@ -31,13 +31,17 @@ import com.nithingodugu.ecommerce.orderservice.outbox.repository.OutboxEventRepo
 import com.nithingodugu.ecommerce.orderservice.repository.OrderRepository;
 import com.nithingodugu.ecommerce.orderservice.service.OrderService;
 import com.nithingodugu.ecommerce.orderservice.util.IdGenerator;
+import io.opentelemetry.api.trace.Span;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.UUID;
+
+import static net.logstash.logback.argument.StructuredArguments.kv;
 
 @Service
 @AllArgsConstructor
@@ -54,6 +58,13 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderResponse createOrder(String userId, CreateOrderRequest request) {
 
+        log.info("Create order request",
+                kv("userId", userId),
+                kv("itemsCount", request.items().size())
+        );
+
+        long startPricingRequest = System.currentTimeMillis();
+
         ProductsPricingResponse pricing = productClient.quote(
                 new ProductsPricingRequest(request.items().stream()
                         .map(item->
@@ -66,13 +77,22 @@ public class OrderServiceImpl implements OrderService {
                 )
         );
 
-        log.info("got response {} {}",pricing.message(), pricing.success());
+        log.info("Pricing response received",
+                kv("success", pricing.success()),
+                kv("message", pricing.message()),
+                kv("durationMs", System.currentTimeMillis() - startPricingRequest)
+        );
 
         if(!pricing.success()){
+
+            log.warn("Create order failed - invalid product",
+                    kv("reason", pricing.message()));
             throw new InvalidProductException(pricing.message());
         }
 
         String orderId = idGenerator.generateOrderId();
+
+        long startReservation = System.currentTimeMillis();
 
         InventoryReservationResponse reservationResponse = inventoryClient.reservation(
                 new InventoryReservationRequest(
@@ -90,15 +110,28 @@ public class OrderServiceImpl implements OrderService {
                 )
         );
 
-        log.info(reservationResponse.message());
-        log.info(String.valueOf(reservationResponse.status()));
+        log.info("Inventory reservation response",
+                kv("orderId", orderId),
+                kv("status", reservationResponse.status()),
+                kv("message", reservationResponse.message()),
+                kv("durationMs", System.currentTimeMillis() - startReservation)
+        );
 
         if (reservationResponse.status() != InventoryReservationResult.SUCCESS){
+            log.warn("Create order failed - out of stock",
+                    kv("orderId", orderId),
+                    kv("reason", reservationResponse.message()));
             throw new OutOfStockException(reservationResponse.message());
         }
 
         Order order = setOrderDetails(userId, orderId, pricing);
         order = orderRepository.save(order);
+
+        log.info("Order created successfully",
+                kv("orderId", orderId),
+                kv("userId", userId),
+                kv("amount", order.getTotalAmount())
+        );
 
         return mapToResponse(order);
 
@@ -130,11 +163,22 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse cancelOrder(String userId, String orderId) {
 
+        log.info("Cancel order request",
+                kv("orderId", orderId),
+                kv("userId", userId)
+        );
+
         Order order = orderRepository
                 .findByOrderIdAndUserId(orderId, userId)
-                .orElseThrow(() -> new OrderNotFoundException("Order id not found"));
+                .orElseThrow(() -> {
+                    log.warn("Cancel order failed - not found",
+                            kv("orderId", orderId));
+                    return new OrderNotFoundException("Order id not found");
+                });
 
         if (order.getOrderStatus() == OrderStatus.CANCELLED){
+            log.warn("Cancel order ignored - already cancelled",
+                    kv("orderId", orderId));
             throw new IllegalStateException("Order already cancelled");
         }
 
@@ -159,6 +203,7 @@ public class OrderServiceImpl implements OrderService {
             payload = objectMapper.writeValueAsString(event);
 
         }catch (JsonProcessingException ex){
+            log.error("Failed to serialize OrderCancelledEvent", kv("error", ex.getMessage()));
             throw new RuntimeException("Failed to serialize OrderCancelledEvent", ex);
         }
 
@@ -168,7 +213,20 @@ public class OrderServiceImpl implements OrderService {
         outbox.setTopic(KafkaTopics.ORDER_CANCELLED);
         outbox.setPayload(payload);
         outbox.setStatus(OutboxStatus.PENDING);
+
+        outbox.setRequestId(MDC.get("requestId"));
+
+        var currentSpan = Span.current().getSpanContext();
+        if (currentSpan.isValid()) {
+            outbox.setOriginalTraceId(currentSpan.getTraceId());
+            outbox.setOriginalSpanId(currentSpan.getSpanId());
+        }
+
         outboxEventRepository.save(outbox);
+
+        log.info("Order cancelled successfully",
+                kv("orderId", orderId)
+        );
 
         return mapToResponse(order);
     }
@@ -176,21 +234,40 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderResponse getOrder(String userId, String orderId) {
 
+        log.debug("GetOrder request",
+                kv("userId", userId),
+                kv("orderId", orderId));
+
         Order order = orderRepository
                 .findByOrderIdAndUserId(orderId, userId)
-                .orElseThrow(() -> new OrderNotFoundException("Order not found"));
+                .orElseThrow(() -> {
+                    log.warn("GetOrder failed",
+                            kv("userId", userId),
+                            kv("orderId", orderId));
+                    return new OrderNotFoundException("Order not found");
+                });
+
+        log.debug("GetOrder request completed",
+                kv("userId", userId),
+                kv("orderId", orderId));
 
         return mapToResponse(order);
     }
 
     @Override
     public List<OrderResponse> getMyOrders(String userId) {
+
+        log.debug("MyOrders request",
+                kv("userId", userId));
+
         List<Order> orders = orderRepository.findByUserId(userId);
+
+        log.debug("MyOrders request completed",
+                kv("userId", userId));
 
         return orders.stream()
                 .map(this::mapToResponse)
                 .toList();
-
     }
 
     private OrderResponse mapToResponse(Order order){
@@ -217,15 +294,24 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderDetailsResponse getInternalOrderDetails(String orderId) {
 
+        log.info("Internal OrderDetails request",
+                kv("orderId", orderId));
+
         Order order = orderRepository.findByOrderId(orderId).orElse(null);
 
         if (order == null){
+            log.warn("Internal OrderDetails failed",
+                    kv("reason", "INVALID_ORDER"),
+                    kv("orderId", orderId));
             return new OrderDetailsResponse(
                     false,
                     "Invalid Order",
                     null
             );
         }
+
+        log.info("Internal OrderDetails sucess",
+                kv("orderId", orderId));
 
         return new OrderDetailsResponse(
                 true,
@@ -238,29 +324,40 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void processPaymentSuccessOrder(String orderId) {
 
+        log.info("Process payment success",
+                kv("orderId", orderId)
+        );
+
         Order order = orderRepository
                 .findByOrderId(orderId)
-                .orElseThrow(()-> new OrderNotFoundException(
-                        orderId
-                ));
+                .orElseThrow(() -> {
+                    log.warn("Process Payment success is failed ",
+                            kv("reason", "ORDER_NOT_FOUND"),
+                            kv("orderId", orderId));
+                    return new OrderNotFoundException(orderId);
+                });
 
         if (order.getOrderStatus() == OrderStatus.CONFIRMED){
+            log.warn("Duplicate payment success event",
+                    kv("orderId", orderId));
             throw new DuplicateOrderStateException(orderId);
         }
 
         order.setOrderStatus(OrderStatus.CONFIRMED);
 
-
         OrderConfirmedEvent event = new OrderConfirmedEvent(
                 orderId
         );
 
-        String payload;
+        String payload = "";
 
         try {
             payload = objectMapper.writeValueAsString(event);
 
         }catch (JsonProcessingException ex){
+            log.error("Serialization failed for OrderConfirmedEvent",
+                    kv("error", ex.getMessage())
+            );
             throw new RuntimeException("Failed to serialize OrderConfirmedEvent", ex);
         }
 
@@ -270,6 +367,19 @@ public class OrderServiceImpl implements OrderService {
         outbox.setTopic(KafkaTopics.ORDER_CONFIRMED);
         outbox.setPayload(payload);
         outbox.setStatus(OutboxStatus.PENDING);
+
+        outbox.setRequestId(MDC.get("requestId"));
+
+        var currentSpan = Span.current().getSpanContext();
+        if (currentSpan.isValid()) {
+            outbox.setOriginalTraceId(currentSpan.getTraceId());
+            outbox.setOriginalSpanId(currentSpan.getSpanId());
+        }
+
+        log.info("Payment success processed",
+                kv("orderId", orderId)
+        );
+
         outboxEventRepository.save(outbox);
     }
 
@@ -277,13 +387,22 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void processPaymentFailedOrder(String orderId) {
 
+        log.info("Process payment failed",
+                kv("orderId", orderId)
+        );
+
         Order order = orderRepository
                 .findByOrderId(orderId)
-                .orElseThrow(()-> new OrderNotFoundException(
-                        orderId
-                ));
+                .orElseThrow(() -> {
+                    log.warn("Process Payment failed error ",
+                            kv("reason", "ORDER_NOT_FOUND"),
+                            kv("orderId", orderId));
+                    return new OrderNotFoundException(orderId);
+                });
 
         if (order.getOrderStatus() == OrderStatus.FAILED){
+            log.warn("Duplicate payment failed event",
+                    kv("orderId", orderId));
             throw new DuplicateOrderStateException(orderId);
         }
 
@@ -302,12 +421,15 @@ public class OrderServiceImpl implements OrderService {
         event.setAmountPaid(order.getTotalAmount());
         event.setItems(eventItems);
 
-        String payload;
+        String payload = "";
 
         try {
             payload = objectMapper.writeValueAsString(event);
 
         }catch (JsonProcessingException ex){
+            log.error("Serialization failed for OrderCancelledEvent",
+                    kv("error", ex.getMessage())
+            );
             throw new RuntimeException("Failed to serialize OrderCancelledEvent", ex);
         }
 
@@ -317,8 +439,18 @@ public class OrderServiceImpl implements OrderService {
         outbox.setTopic(KafkaTopics.ORDER_FAILED);
         outbox.setPayload(payload);
         outbox.setStatus(OutboxStatus.PENDING);
+
+        outbox.setRequestId(MDC.get("requestId"));
+
+        var currentSpan = Span.current().getSpanContext();
+        if (currentSpan.isValid()) {
+            outbox.setOriginalTraceId(currentSpan.getTraceId());
+            outbox.setOriginalSpanId(currentSpan.getSpanId());
+        }
         outboxEventRepository.save(outbox);
+
+        log.info("Payment failed processed",
+                kv("orderId", orderId)
+        );
     }
-
-
 }
