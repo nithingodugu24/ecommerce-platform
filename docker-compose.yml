@@ -111,6 +111,23 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  jaeger:
+      image: jaegertracing/all-in-one:1.76.0
+      container_name: jaeger
+      restart: unless-stopped
+      environment:
+        - COLLECTOR_OTLP_ENABLED=true
+        - SPAN_STORAGE_TYPE=memory
+        - MEMORY_MAX_TRACES=50000
+      ports:
+        - "16686:16686"
+        - "4317:4317"
+        - "4318:4318"
+      healthcheck:
+        test: ["CMD", "wget", "--spider", "-q", "http://localhost:14269/"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
   discovery-service:
     build:
       context: .
