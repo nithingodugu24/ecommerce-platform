@@ -46,7 +46,6 @@ public class ProductServiceImpl implements ProductService {
     private final OutboxEventRepository outboxEventRepository;
     private final IdGenerator idGenerator;
     private final ObjectMapper objectMapper;
-    private final OpenTelemetry openTelemetry;
 
     private static final String PRODUCT_CACHE = "product";
     private static final String PRODUCT_PAGE_CACHE = "product_page";
