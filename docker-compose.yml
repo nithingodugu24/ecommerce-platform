@@ -128,6 +128,9 @@ services:
         interval: 10s
         timeout: 5s
         retries: 5
+      networks:
+        - ecom-network
+
   discovery-service:
     build:
       context: .
@@ -188,6 +191,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       EUREKA_SERVICE_URL: discovery-service:8761
       SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       JAEGER_SERVICE_URL: jaeger:4318
     logging:
       driver: fluentd
