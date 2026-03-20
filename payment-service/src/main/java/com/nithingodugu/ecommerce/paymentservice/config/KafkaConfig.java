@@ -1,8 +1,10 @@
 package com.nithingodugu.ecommerce.paymentservice.config;
 
+import com.nithingodugu.ecommerce.paymentservice.kafka.KafkaMdcInterceptor;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
@@ -22,6 +24,9 @@ public class KafkaConfig {
 
     @Value("${spring.kafka.consumer.group-id}")
     private String GROUP_ID;
+
+    @Autowired
+    private KafkaMdcInterceptor interceptor;
 
     @Bean
     public ConsumerFactory<String, String> consumerFactory(){
@@ -45,6 +50,8 @@ public class KafkaConfig {
 
         factory.setConsumerFactory(consumerFactory);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
+        factory.getContainerProperties().setObservationEnabled(true);
+        factory.setRecordInterceptor(interceptor);
         return factory;
     }
 
@@ -60,6 +67,8 @@ public class KafkaConfig {
 
     @Bean
     public KafkaTemplate<String, String> kafkaTemplate(){
-        return new KafkaTemplate<>(producerFactory());
+        KafkaTemplate<String, String> kafkaTemplate = new KafkaTemplate<>(producerFactory());
+        kafkaTemplate.setObservationEnabled(true);
+        return kafkaTemplate;
     }
 }
