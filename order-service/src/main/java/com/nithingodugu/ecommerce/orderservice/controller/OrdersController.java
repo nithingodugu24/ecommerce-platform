@@ -40,7 +40,7 @@ public class OrdersController {
         return orderService.getOrder(userId, orderId);
     }
 
-    @PostMapping("/cancel/{id}")
+    @PostMapping("/cancel/{orderId}")
     public OrderResponse cancelOrder(
             @AuthenticationPrincipal String userId,
             @PathVariable String orderId){

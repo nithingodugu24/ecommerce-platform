@@ -3,6 +3,7 @@ package com.nithingodugu.ecommerce.apigateway.filter;
 import net.logstash.logback.argument.StructuredArguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.cloud.gateway.route.Route;
@@ -69,11 +70,30 @@ public class LoggingFilter implements GlobalFilter, Ordered {
                 StructuredArguments.kv("clientIp",   getClientIp(request))
         );
 
-//        mutatedExchange.getResponse().getHeaders().add(REQUEST_ID_HEADER, requestId);
+        mutatedExchange.getResponse().getHeaders().set(REQUEST_ID_HEADER, requestId);
 
         return chain.filter(mutatedExchange)
-                .doOnSuccess(v -> logResponse(mutatedExchange, finalRequestId, upstreamService, startTime))
-                .doOnError(error -> logError(mutatedExchange, finalRequestId, upstreamService, startTime, error));
+                .doOnEach(signal -> {
+
+                    if (!signal.isOnComplete() && !signal.isOnError()) return;
+
+                    String userId = signal.getContextView()
+                            .getOrDefault("userId", "anonymous");
+
+                    if (!userId.equals("anonymous")){
+                        MDC.put("userId", userId);
+                    }
+
+                    MDC.put("requestId", finalRequestId);
+
+                    if (signal.isOnError()) {
+                        logError(mutatedExchange, finalRequestId, upstreamService, startTime, signal.getThrowable());
+                    } else {
+                        logResponse(mutatedExchange, finalRequestId, upstreamService, startTime);
+                    }
+
+                    MDC.clear();
+                });
     }
 
     private void logResponse(ServerWebExchange exchange,

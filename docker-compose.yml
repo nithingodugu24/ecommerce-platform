@@ -111,6 +111,23 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  jaeger:
+      image: jaegertracing/all-in-one:1.76.0
+      container_name: jaeger
+      restart: unless-stopped
+      environment:
+        - COLLECTOR_OTLP_ENABLED=true
+        - SPAN_STORAGE_TYPE=memory
+        - MEMORY_MAX_TRACES=50000
+      ports:
+        - "16686:16686"
+        - "4317:4317"
+        - "4318:4318"
+      healthcheck:
+        test: ["CMD", "wget", "--spider", "-q", "http://localhost:14269/"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
   discovery-service:
     build:
       context: .
@@ -131,6 +148,8 @@ services:
         condition: service_healthy
       discovery-service:
         condition: service_started
+      jaeger:
+        condition: service_started
     environment:
       SERVER_PORT: 8000
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth_db
@@ -138,14 +157,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       EUREKA_SERVICE_URL: discovery-service:8761
       JWT_SECRET: ${JWT_SECRET}
+      JAEGER_SERVICE_URL: jaeger:4318
     logging:
       driver: fluentd
       options:
         fluentd-address: "localhost:24224"
         fluentd-async: "true"
         tag: auth-service
-
-
     networks:
       - ecom-network
 
@@ -160,6 +178,8 @@ services:
         condition: service_started
       redis:
         condition: service_started
+      jaeger:
+        condition: service_started      
     environment:
       SERVER_PORT: 8001
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/product_db
@@ -168,7 +188,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       EUREKA_SERVICE_URL: discovery-service:8761
       SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
+      JAEGER_SERVICE_URL: jaeger:4318
     logging:
       driver: fluentd
       options:
@@ -188,6 +208,8 @@ services:
         condition: service_healthy
       discovery-service:
         condition: service_started
+      jaeger:
+        condition: service_started
     environment:
       SERVER_PORT: 8002
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/order_db
@@ -195,6 +217,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       EUREKA_SERVICE_URL: discovery-service:8761
+      JAEGER_SERVICE_URL: jaeger:4318
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: order-service
     networks:
       - ecom-network
 
@@ -207,6 +236,8 @@ services:
         condition: service_healthy
       discovery-service:
         condition: service_started
+      jaeger:
+        condition: service_started
     environment:
       SERVER_PORT: 8003
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/inventory_db
@@ -214,6 +245,14 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       EUREKA_SERVICE_URL: discovery-service:8761
+      JAEGER_SERVICE_URL: jaeger:4318
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: inventory-service
+
     networks:
       - ecom-network
 
@@ -226,6 +265,8 @@ services:
         condition: service_healthy
       discovery-service:
         condition: service_started
+      jaeger:
+        condition: service_started
     environment:
       SERVER_PORT: 8004
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/payment_db
@@ -233,6 +274,14 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       EUREKA_SERVICE_URL: discovery-service:8761
+      JAEGER_SERVICE_URL: jaeger:4318
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: payment-service
+
     networks:
       - ecom-network
 
@@ -246,18 +295,19 @@ services:
         condition: service_started
       fluent-bit:
         condition: service_started
-
+      jaeger:
+        condition: service_started
     environment:
       SERVER_PORT: 8080
       JWT_SECRET: ${JWT_SECRET}
       EUREKA_SERVICE_URL: discovery-service:8761
+      JAEGER_SERVICE_URL: jaeger:4318
     logging:
       driver: fluentd
       options:
         fluentd-address: "localhost:24224"
         fluentd-async: "true"
         tag: api-gateway
-
     ports:
       - "8080:8080"
     networks:

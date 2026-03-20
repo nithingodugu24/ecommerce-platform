@@ -29,6 +29,7 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     )
             throws ServletException, IOException {
+
         String userId = request.getHeader("X-USER-ID");
         String userRole = request.getHeader("X-USER-ROLE");
 
@@ -46,7 +47,7 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
 
             SecurityContextHolder.getContext().setAuthentication(auth);
 
-            MDC.put("userId", userId.toString());
+            MDC.put("userId", userId);
             MDC.put("userRole", userRole);
         }
 

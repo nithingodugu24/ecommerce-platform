@@ -19,6 +19,8 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.List;
 
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -38,12 +40,12 @@ public class OutboxEventScheduler {
 
         if (events.isEmpty()) return;
 
+        var tracer = openTelemetry.getTracer("outbox-processor");
+
         for (OutboxEvent event : events) {
 
             event.setStatus(OutboxStatus.PROCESSING);
             outboxEventRepository.save(event);
-
-            var tracer = openTelemetry.getTracer("outbox-processor");
 
             var spanBuilder = tracer.spanBuilder("outbox.publish")
                     .setSpanKind(SpanKind.PRODUCER)
@@ -64,7 +66,6 @@ public class OutboxEventScheduler {
 
             final var publishSpan = span;
             final Long eventId = event.getId();
-            final String eventLogId = event.getEventId();
 
             try (var scope = span.makeCurrent()) {
 
@@ -110,7 +111,9 @@ public class OutboxEventScheduler {
             e.setRetryCount(retries);
             if (retries >= MAX_RETRY) {
                 e.setStatus(OutboxStatus.FAILED);
-                log.error("Outbox event permanently failed eventId={}", e.getEventId(), ex);
+                log.error("Outbox event permanently failed",
+                        kv("eventId", e.getEventId()),
+                        kv("error", ex));
             } else {
                 e.setStatus(OutboxStatus.PENDING);
             }

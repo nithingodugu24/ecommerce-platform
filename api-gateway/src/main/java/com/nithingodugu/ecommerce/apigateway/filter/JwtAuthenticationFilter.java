@@ -5,6 +5,7 @@ import io.jsonwebtoken.Claims;
 import net.logstash.logback.argument.StructuredArguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -46,7 +47,6 @@ public class JwtAuthenticationFilter implements GlobalFilter {
             return chain.filter(exchange);
         }
 
-
         String authHeader = exchange
                 .getRequest()
                 .getHeaders()
@@ -80,10 +80,14 @@ public class JwtAuthenticationFilter implements GlobalFilter {
                     .mutate()
                     .header("X-USER-ID", userId)
                     .header("X-USER-ROLE", userRole)
-
                     .build();
 
-            return chain.filter(exchange.mutate().request(mutatedRequest).build());
+            return chain.filter(exchange.mutate().request(mutatedRequest).build())
+                    .contextWrite(ctx -> ctx
+                            .put("userId", userId)
+                            .put("userRole", userRole)
+                    );
+
 
         }catch (Exception ex){
             log.error(

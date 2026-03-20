@@ -25,7 +25,7 @@ public class OutboxEvent {
     private String eventId;
 
     @Column(nullable = false)
-    private String aggregateType = "Payment";
+    private String aggregateType = "Product";
 
     @Column(nullable = false)
     private String aggregateId;
@@ -38,6 +38,10 @@ public class OutboxEvent {
 
     @Enumerated(EnumType.STRING)
     private OutboxStatus status;
+
+    private String requestId;
+    private String originalTraceId;
+    private String originalSpanId;
 
     @CreationTimestamp
     private Instant createdAt;
