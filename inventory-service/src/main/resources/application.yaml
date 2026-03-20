@@ -10,6 +10,10 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
 
+
+  reactor:
+    context-propagation: auto
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -17,14 +21,10 @@ spring:
     properties:
       hibernate:
         format_sql: true
-    defer-datasource-initialization:
-      true
-    sql:
-      init:
-        mode:
-          always
-        data-locations:
-          classpath:data.sql
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: never
 
 
   kafka:
@@ -40,3 +40,29 @@ eureka:
 #logging:
 #  level:
 #    root: DEBUG
+
+management:
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0
+    propagation:
+      type: w3c
+    export:
+      otlp:
+        enabled: true
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  logging:
+    export:
+      otlp:
+        enabled: false
+  opentelemetry:
+    resource-attributes:
+      service.name: ${spring.application.name}
+    tracing:
+      export:
+        otlp:
+          endpoint: http://${JAEGER_SERVICE_URL}/v1/traces

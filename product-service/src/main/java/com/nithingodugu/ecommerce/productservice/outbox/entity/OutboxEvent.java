@@ -39,6 +39,10 @@ public class OutboxEvent {
     @Enumerated(EnumType.STRING)
     private OutboxStatus status;
 
+    private String requestId;
+    private String originalTraceId;
+    private String originalSpanId;
+
     @CreationTimestamp
     private Instant createdAt;
 

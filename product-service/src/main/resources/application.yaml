@@ -50,16 +50,27 @@ eureka:
       defaultZone: http://${EUREKA_SERVICE_URL}/eureka
 
 management:
-  otlp:
-    tracing:
-      endpoint: http://${JAEGER_SERVICE_URL}/v1/traces
-    metrics:
-      export:
-        enabled: false
   tracing:
     enabled: true
     sampling:
       probability: 1.0
     propagation:
       type: w3c
-
+    export:
+      otlp:
+        enabled: true
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  logging:
+    export:
+      otlp:
+        enabled: false
+  opentelemetry:
+    resource-attributes:
+      service.name: ${spring.application.name}
+    tracing:
+      export:
+        otlp:
+          endpoint: http://${JAEGER_SERVICE_URL}/v1/traces

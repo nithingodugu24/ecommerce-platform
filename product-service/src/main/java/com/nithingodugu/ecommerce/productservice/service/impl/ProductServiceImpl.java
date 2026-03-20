@@ -16,9 +16,12 @@ import com.nithingodugu.ecommerce.productservice.outbox.repository.OutboxEventRe
 import com.nithingodugu.ecommerce.productservice.repository.ProductRepository;
 import com.nithingodugu.ecommerce.productservice.service.ProductService;
 import com.nithingodugu.ecommerce.productservice.util.IdGenerator;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -43,6 +46,7 @@ public class ProductServiceImpl implements ProductService {
     private final OutboxEventRepository outboxEventRepository;
     private final IdGenerator idGenerator;
     private final ObjectMapper objectMapper;
+    private final OpenTelemetry openTelemetry;
 
     private static final String PRODUCT_CACHE = "product";
     private static final String PRODUCT_PAGE_CACHE = "product_page";
@@ -108,6 +112,13 @@ public class ProductServiceImpl implements ProductService {
         outbox.setTopic(KafkaTopics.PRODUCT_CREATED);
         outbox.setPayload(payload);
         outbox.setStatus(OutboxStatus.PENDING);
+        outbox.setRequestId(MDC.get("requestId"));
+
+        var currentSpan = Span.current().getSpanContext();
+        if (currentSpan.isValid()) {
+            outbox.setOriginalTraceId(currentSpan.getTraceId());
+            outbox.setOriginalSpanId(currentSpan.getSpanId());
+        }
 
         outboxEventRepository.save(outbox);
 

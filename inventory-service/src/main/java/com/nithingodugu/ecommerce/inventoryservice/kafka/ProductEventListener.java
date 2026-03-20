@@ -12,9 +12,12 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 import com.nithingodugu.ecommerce.common.event.ProductCreatedEvent;
+
+import static net.logstash.logback.argument.StructuredArguments.kv;
 
 @Slf4j
 @Service
@@ -32,18 +35,39 @@ public class ProductEventListener {
 
         try {
             ProductCreatedEvent event = objectMapper.readValue(payload, ProductCreatedEvent.class);
+
+            log.info("ProductCreatedEvent received",
+                    kv("productId", event.getProductId()),
+                    kv("quantity", event.getInitialQuantity())
+            );
+
             inventoryService.handleProductCreated(event);
+
+            log.info("ProductCreatedEvent processed",
+                    kv("productId", event.getProductId())
+            );
+
             ack.acknowledge();
 
         }catch (JsonProcessingException ex) {
-            log.error("Failed to deserialize ProductCreatedEvent payload={}", payload, ex);
+            log.error("Deserialization failed for ProductCreatedEvent",
+                    kv("payload", safePayload(payload)),
+                    kv("error", ex.getMessage()),
+                    ex
+            );
 
         }catch (DuplicateInventoryException ex) {
-            log.error("Inventory already exists with productId={}", ex.getMessage());
+            log.warn("Inventory already exists",
+                    kv("productId", ex.getMessage())
+            );
+
             ack.acknowledge();
 
         }catch (Exception ex){
-            log.error("Failed to handle ProductCreatedEvent payload={}", payload, ex);
+            log.error("Unexpected error processing ProductCreatedEvent",
+                    kv("payload", safePayload(payload)),
+                    ex
+            );
         }
     }
 
@@ -54,18 +78,43 @@ public class ProductEventListener {
     ){
         try {
             ProductDeletedEvent event = objectMapper.readValue(payload, ProductDeletedEvent.class);
+
+            log.info("ProductDeletedEvent received",
+                    kv("productId", event.getProductId())
+            );
+
             inventoryService.handleProductDeleted(event);
+
+            log.info("ProductDeletedEvent processed",
+                    kv("productId", event.getProductId())
+            );
+
             ack.acknowledge();
 
         }catch (JsonProcessingException ex) {
-            log.error("Failed to deserialize ProductDeletedEvent payload={}", payload, ex);
+            log.error("Deserialization failed for ProductDeletedEvent",
+                    kv("payload", safePayload(payload)),
+                    kv("error", ex.getMessage()),
+                    ex
+            );
 
         }catch (InventoryNotFoundException ex) {
-            log.error("Inventory not found with productId={}", ex.getMessage());
+            log.warn("Inventory not found",
+                    kv("productId", ex.getMessage())
+            );
+
             ack.acknowledge();
 
         }catch (Exception ex){
-            log.error("Failed to handle ProductDeletedEvent payload={}", payload, ex);
+            log.error("Unexpected error processing ProductDeletedEvent",
+                    kv("payload", safePayload(payload)),
+                    ex
+            );
         }
     }
+
+    private String safePayload(String payload) {
+        return payload.length() > 500 ? payload.substring(0, 500) + "..." : payload;
+    }
+
 }
