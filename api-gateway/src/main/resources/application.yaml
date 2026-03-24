@@ -12,36 +12,71 @@ spring:
           uri: lb://AUTH-SERVICE
           predicates:
             - Path=/auth/**,/users/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: authService
+                fallbackUri: forward:/fallback/auth
 
         - id: product-service
           uri: lb://PRODUCT-SERVICE
           predicates:
             - Path=/products/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: productService
+                fallbackUri: forward:/fallback/product
 
         - id: admin-product-service
           uri: lb://PRODUCT-SERVICE
           predicates:
             - Path=/admin/products/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: adminProductService
+                fallbackUri: forward:/fallback/product
 
         - id: order-service
           uri: lb://ORDER-SERVICE
           predicates:
             - Path=/orders/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: orderService
+                fallbackUri: forward:/fallback/order
 
         - id: inventory-service
           uri: lb://INVENTORY-SERVICE
           predicates:
             - Path=/inventory/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: inventoryService
+                fallbackUri: forward:/fallback/inventory
 
         - id: admin-inventory-service
           uri: lb://INVENTORY-SERVICE
           predicates:
             - Path=/admin/inventory/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: adminInventoryService
+                fallbackUri: forward:/fallback/inventory
 
         - id: payment-service
           uri: lb://PAYMENT-SERVICE
           predicates:
             - Path=/payments/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: paymentService
+                fallbackUri: forward:/fallback/payment
 
   reactor:
     context-propagation: auto
