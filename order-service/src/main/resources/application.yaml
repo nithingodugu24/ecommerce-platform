@@ -57,3 +57,15 @@ management:
       export:
         otlp:
           endpoint: http://${JAEGER_SERVICE_URL}/v1/traces
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      paymentService:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+      inventoryService:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s

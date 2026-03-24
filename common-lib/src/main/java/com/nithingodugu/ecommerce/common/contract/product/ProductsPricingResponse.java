@@ -5,7 +5,7 @@ import java.util.List;
 
 
 public record ProductsPricingResponse(
-        boolean success,
+        ProductsPricingStatus status,
         String message,
         List<ProductPriceDetail> items,
         BigDecimal totalAmount
