@@ -3,7 +3,7 @@ package com.nithingodugu.ecommerce.common.contract.order;
 import java.math.BigDecimal;
 
 public record OrderDetailsResponse(
-        boolean success,
+        OrderDetailsStatus status,
         String message,
         BigDecimal amount
 ) {

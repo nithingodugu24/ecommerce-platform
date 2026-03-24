@@ -2,10 +2,7 @@ package com.nithingodugu.ecommerce.productservice.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nithingodugu.ecommerce.common.contract.product.ProductPriceDetail;
-import com.nithingodugu.ecommerce.common.contract.product.ProductPricingItem;
-import com.nithingodugu.ecommerce.common.contract.product.ProductsPricingRequest;
-import com.nithingodugu.ecommerce.common.contract.product.ProductsPricingResponse;
+import com.nithingodugu.ecommerce.common.contract.product.*;
 import com.nithingodugu.ecommerce.productservice.domain.entity.Product;
 import com.nithingodugu.ecommerce.productservice.dto.*;
 import com.nithingodugu.ecommerce.productservice.exceptions.ProductNotFoundException;
@@ -279,7 +276,7 @@ public class ProductServiceImpl implements ProductService {
                     kv("foundCount", products.size()));
 
             return new ProductsPricingResponse(
-                    false,
+                    ProductsPricingStatus.INVALID_PRODUCT,
                     "One or more products not found",
                     null,
                     null
@@ -298,7 +295,7 @@ public class ProductServiceImpl implements ProductService {
                 );
 
                 return new ProductsPricingResponse(
-                        false,
+                        ProductsPricingStatus.INVALID_PRODUCT,
                         "Product inactive: " + product.getProductId(),
                         null,
                         null
@@ -326,7 +323,7 @@ public class ProductServiceImpl implements ProductService {
         log.info("Pricing quote success");
 
         return new ProductsPricingResponse(
-                true,
+                ProductsPricingStatus.VERIFIED,
                 "success",
                 priceDetails,
                 total
