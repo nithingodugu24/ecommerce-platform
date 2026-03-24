@@ -3,6 +3,7 @@ package com.nithingodugu.ecommerce.paymentservice.service.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nithingodugu.ecommerce.common.contract.order.OrderDetailsResponse;
+import com.nithingodugu.ecommerce.common.contract.order.OrderDetailsStatus;
 import com.nithingodugu.ecommerce.common.event.OrderCancelledEvent;
 import com.nithingodugu.ecommerce.common.event.PaymentAuthorizedEvent;
 import com.nithingodugu.ecommerce.common.event.PaymentFailedEvent;
@@ -14,12 +15,14 @@ import com.nithingodugu.ecommerce.paymentservice.dto.PaymentCreateResponse;
 import com.nithingodugu.ecommerce.paymentservice.dto.PaymentWebhookRequest;
 import com.nithingodugu.ecommerce.paymentservice.exceptions.DuplicateRefundException;
 import com.nithingodugu.ecommerce.paymentservice.exceptions.PaymentNotFoundException;
+import com.nithingodugu.ecommerce.paymentservice.exceptions.ServiceUnavailableException;
 import com.nithingodugu.ecommerce.paymentservice.kafka.KafkaTopics;
 import com.nithingodugu.ecommerce.paymentservice.outbox.entity.OutboxEvent;
 import com.nithingodugu.ecommerce.paymentservice.outbox.entity.OutboxStatus;
 import com.nithingodugu.ecommerce.paymentservice.outbox.repository.OutboxEventRepository;
 import com.nithingodugu.ecommerce.paymentservice.repository.PaymentRespository;
 import com.nithingodugu.ecommerce.paymentservice.service.PaymentService;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.opentelemetry.api.trace.Span;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +46,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
 
+    @CircuitBreaker(name = "orderService", fallbackMethod = "orderServiceFallback")
     public PaymentCreateResponse pay(String orderId){
 
         log.info("Payment request initiated",
@@ -51,7 +55,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         OrderDetailsResponse orderDetails = orderClient.getOrderDetails(orderId);
 
-        if (!orderDetails.success()){
+        if (orderDetails.status() == OrderDetailsStatus.INVALID){
             log.warn("Payment failed - invalid order",
                     kv("orderId", orderId),
                     kv("reason", orderDetails.message())
@@ -80,6 +84,12 @@ public class PaymentServiceImpl implements PaymentService {
 
         );
 
+    }
+
+    public PaymentCreateResponse orderServiceFallback(String orderId, Exception ex) {
+        log.error("Order service unavailable", ex);
+
+        throw new ServiceUnavailableException("Order service unavailable");
     }
 
     @Override

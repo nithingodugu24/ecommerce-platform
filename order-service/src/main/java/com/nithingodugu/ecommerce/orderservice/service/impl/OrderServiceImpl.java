@@ -7,10 +7,8 @@ import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservation
 import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservationResponse;
 import com.nithingodugu.ecommerce.common.contract.inventory.InventoryReservationResult;
 import com.nithingodugu.ecommerce.common.contract.order.OrderDetailsResponse;
-import com.nithingodugu.ecommerce.common.contract.product.ProductPriceDetail;
-import com.nithingodugu.ecommerce.common.contract.product.ProductPricingItem;
-import com.nithingodugu.ecommerce.common.contract.product.ProductsPricingRequest;
-import com.nithingodugu.ecommerce.common.contract.product.ProductsPricingResponse;
+import com.nithingodugu.ecommerce.common.contract.order.OrderDetailsStatus;
+import com.nithingodugu.ecommerce.common.contract.product.*;
 import com.nithingodugu.ecommerce.common.event.OrderCancelledEvent;
 import com.nithingodugu.ecommerce.common.event.OrderConfirmedEvent;
 import com.nithingodugu.ecommerce.common.event.OrderItemEvent;
@@ -24,6 +22,7 @@ import com.nithingodugu.ecommerce.orderservice.domain.enums.OrderStatus;
 import com.nithingodugu.ecommerce.orderservice.dto.*;
 import com.nithingodugu.ecommerce.orderservice.exceptions.DuplicateOrderStateException;
 import com.nithingodugu.ecommerce.orderservice.exceptions.OrderNotFoundException;
+import com.nithingodugu.ecommerce.orderservice.exceptions.ServiceUnavailableException;
 import com.nithingodugu.ecommerce.orderservice.kafka.KafkaTopics;
 import com.nithingodugu.ecommerce.orderservice.outbox.entity.OutboxEvent;
 import com.nithingodugu.ecommerce.orderservice.outbox.entity.OutboxStatus;
@@ -31,6 +30,7 @@ import com.nithingodugu.ecommerce.orderservice.outbox.repository.OutboxEventRepo
 import com.nithingodugu.ecommerce.orderservice.repository.OrderRepository;
 import com.nithingodugu.ecommerce.orderservice.service.OrderService;
 import com.nithingodugu.ecommerce.orderservice.util.IdGenerator;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.opentelemetry.api.trace.Span;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
@@ -65,7 +65,7 @@ public class OrderServiceImpl implements OrderService {
 
         long startPricingRequest = System.currentTimeMillis();
 
-        ProductsPricingResponse pricing = productClient.quote(
+        ProductsPricingResponse pricing = getPricing(
                 new ProductsPricingRequest(request.items().stream()
                         .map(item->
                                 new ProductPricingItem(
@@ -78,23 +78,25 @@ public class OrderServiceImpl implements OrderService {
         );
 
         log.info("Pricing response received",
-                kv("success", pricing.success()),
+                kv("success", pricing.status().name()),
                 kv("message", pricing.message()),
                 kv("durationMs", System.currentTimeMillis() - startPricingRequest)
         );
 
-        if(!pricing.success()){
-
+        if(pricing.status() == ProductsPricingStatus.INVALID_PRODUCT){
             log.warn("Create order failed - invalid product",
                     kv("reason", pricing.message()));
             throw new InvalidProductException(pricing.message());
+
+        }else if(pricing.status() == ProductsPricingStatus.FAILED){
+            throw new ServiceUnavailableException(pricing.message());
         }
 
         String orderId = idGenerator.generateOrderId();
 
         long startReservation = System.currentTimeMillis();
 
-        InventoryReservationResponse reservationResponse = inventoryClient.reservation(
+        InventoryReservationResponse reservationResponse = reserveInventory(
                 new InventoryReservationRequest(
                         orderId,
                         request.items()
@@ -117,7 +119,10 @@ public class OrderServiceImpl implements OrderService {
                 kv("durationMs", System.currentTimeMillis() - startReservation)
         );
 
-        if (reservationResponse.status() != InventoryReservationResult.SUCCESS){
+        if (reservationResponse.status() == InventoryReservationResult.FAILED){
+            throw new ServiceUnavailableException(reservationResponse.message());
+
+        }else if (reservationResponse.status() != InventoryReservationResult.SUCCESS){
             log.warn("Create order failed - out of stock",
                     kv("orderId", orderId),
                     kv("reason", reservationResponse.message()));
@@ -135,6 +140,37 @@ public class OrderServiceImpl implements OrderService {
 
         return mapToResponse(order);
 
+    }
+
+    @CircuitBreaker(name = "productService", fallbackMethod = "productFallback")
+    public ProductsPricingResponse getPricing(ProductsPricingRequest request) {
+        return productClient.quote(request);
+    }
+
+    public ProductsPricingResponse productFallback(ProductsPricingRequest request, Exception ex) {
+        log.error("Product service failed",
+                kv("error", ex));
+
+        return new ProductsPricingResponse(
+                ProductsPricingStatus.FAILED,
+                "Product service unavailable",
+                List.of(),
+                null
+        );
+    }
+
+    public InventoryReservationResponse inventoryFallback(InventoryReservationRequest request, Exception ex) {
+        log.error("Inventory service failed", kv("error", ex));
+
+        return new InventoryReservationResponse(
+                InventoryReservationResult.FAILED,
+                "Inventory service unavailable"
+        );
+    }
+
+    @CircuitBreaker(name = "inventoryService", fallbackMethod = "inventoryFallback")
+    public InventoryReservationResponse reserveInventory(InventoryReservationRequest request) {
+        return inventoryClient.reservation(request);
     }
 
     private static @NonNull Order setOrderDetails(String userId, String orderId, ProductsPricingResponse pricing) {
@@ -304,7 +340,7 @@ public class OrderServiceImpl implements OrderService {
                     kv("reason", "INVALID_ORDER"),
                     kv("orderId", orderId));
             return new OrderDetailsResponse(
-                    false,
+                    OrderDetailsStatus.INVALID,
                     "Invalid Order",
                     null
             );
@@ -314,7 +350,7 @@ public class OrderServiceImpl implements OrderService {
                 kv("orderId", orderId));
 
         return new OrderDetailsResponse(
-                true,
+                OrderDetailsStatus.SUCCESS,
                 "success",
                 order.getTotalAmount()
         );
