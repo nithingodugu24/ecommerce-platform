@@ -47,16 +47,16 @@ public class PaymentServiceImpl implements PaymentService {
     private final ObjectMapper objectMapper;
 
     @CircuitBreaker(name = "orderService", fallbackMethod = "orderServiceFallback")
-    public PaymentCreateResponse pay(String orderId){
+    public PaymentCreateResponse pay(String orderId, String userId){
 
         log.info("Payment request initiated",
                 kv("orderId", orderId)
         );
 
-        OrderDetailsResponse orderDetails = orderClient.getOrderDetails(orderId);
+        OrderDetailsResponse orderDetails = orderClient.getOrderDetails(userId, orderId);
 
         if (orderDetails.status() == OrderDetailsStatus.INVALID){
-            log.warn("Payment failed - invalid order",
+            log.warn("Payment request failed - invalid order",
                     kv("orderId", orderId),
                     kv("reason", orderDetails.message())
             );
