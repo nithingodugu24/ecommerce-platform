@@ -9,7 +9,7 @@ public interface PaymentService {
 
 //    PaymentServicePaymentResponse authorize(AuthorizePaymentRequest request);
 
-    PaymentCreateResponse pay(String orderNumber);
+    PaymentCreateResponse pay(String orderNumber, String userId);
 
     void handleWebhook(PaymentWebhookRequest request);
 
