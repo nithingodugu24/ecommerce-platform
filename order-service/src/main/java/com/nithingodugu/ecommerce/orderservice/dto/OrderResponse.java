@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record OrderResponse(
-        String orderNumber,
+        String orderId,
         String status,
         BigDecimal totalAmount,
         List<OrderItemResponse> items,
