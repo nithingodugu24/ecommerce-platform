@@ -16,15 +16,15 @@ import java.util.UUID;
 @Table(
         name = "orders",
         indexes = {
-                @Index(name = "idx_order_number", columnList = "orderNumber")
+                @Index(name = "idx_order_id", columnList = "orderId")
         }
 )
+@Entity
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Entity
 @Setter
-@Data
+@Getter
 public class Order {
 
     @Id
