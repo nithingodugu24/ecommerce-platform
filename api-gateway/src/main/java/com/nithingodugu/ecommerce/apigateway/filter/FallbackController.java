@@ -1,48 +1,75 @@
 package com.nithingodugu.ecommerce.apigateway.filter;
 
+import com.nithingodugu.ecommerce.apigateway.dto.ApiError;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.Instant;
+import java.util.Map;
 
 @RestController
 public class FallbackController {
 
-    @GetMapping("/fallback/payment")
-    public ResponseEntity<String> paymentFallback() {
-        return ResponseEntity
-                .status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body("Payment service is down (gateway fallback)");
+    @RequestMapping("/fallback/payment")
+    public ResponseEntity<ApiError> paymentFallback() {
+        ApiError error = ApiError.builder()
+                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .message("Payment Service temporarily unavailable")
+                .timestamp(Instant.now())
+                .build();
+        return ResponseEntity.status(error.status()).body(error);
     }
 
-    @GetMapping("/fallback/order")
-    public ResponseEntity<String> orderFallback() {
-        return ResponseEntity
-                .status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body("Order service is down (gateway fallback)");
+    @RequestMapping("/fallback/order")
+    public ResponseEntity<ApiError> orderFallback() {
+        ApiError error = ApiError.builder()
+                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .message("Order Service temporarily unavailable")
+                .timestamp(Instant.now())
+                .build();
+        return ResponseEntity.status(error.status()).body(error);
     }
 
-    @GetMapping("/fallback/product")
-    public ResponseEntity<String> productFallback() {
-        return ResponseEntity
-                .status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body("Product service is down (gateway fallback)");
+    @RequestMapping("/fallback/product")
+    public ResponseEntity<ApiError> productFallback() {
+        ApiError error = ApiError.builder()
+                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .message("Product Service temporarily unavailable")
+                .timestamp(Instant.now())
+                .build();
+        return ResponseEntity.status(error.status()).body(error);
     }
 
-    @GetMapping("/fallback/inventory")
-    public ResponseEntity<String> inventoryFallback() {
-        return ResponseEntity
-                .status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body("Inventory service is down (gateway fallback)");
+    @RequestMapping("/fallback/inventory")
+    public ResponseEntity<ApiError> inventoryFallback() {
+        ApiError error = ApiError.builder()
+                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .message("Inventory Service temporarily unavailable")
+                .timestamp(Instant.now())
+                .build();
+        return ResponseEntity.status(error.status()).body(error);
     }
 
-
-    @GetMapping("/fallback/auth")
-    public ResponseEntity<String> authFallback() {
-        return ResponseEntity
-                .status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body("Auth service is down (gateway fallback)");
+    @RequestMapping("/fallback/auth")
+    public ResponseEntity<ApiError> authFallback() {
+        ApiError error = ApiError.builder()
+                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .message("Authentication Service temporarily unavailable")
+                .timestamp(Instant.now())
+                .build();
+        return ResponseEntity.status(error.status()).body(error);
     }
 
-
+    @RequestMapping("/fallback/cart")
+    public ResponseEntity<ApiError> cartFallback() {
+        ApiError error = ApiError.builder()
+                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .message("Cart Service temporarily unavailable")
+                .timestamp(Instant.now())
+                .build();
+        return ResponseEntity.status(error.status()).body(error);
+    }
 }
