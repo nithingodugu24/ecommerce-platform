@@ -328,12 +328,12 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderDetailsResponse getInternalOrderDetails(String orderId) {
+    public OrderDetailsResponse getInternalOrderDetails(String userId, String orderId) {
 
         log.info("Internal OrderDetails request",
                 kv("orderId", orderId));
 
-        Order order = orderRepository.findByOrderId(orderId).orElse(null);
+        Order order = orderRepository.findByOrderIdAndUserId(orderId, userId).orElse(null);
 
         if (order == null){
             log.warn("Internal OrderDetails failed",

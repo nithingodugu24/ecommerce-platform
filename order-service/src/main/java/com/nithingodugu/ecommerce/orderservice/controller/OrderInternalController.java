@@ -12,8 +12,11 @@ public class OrderInternalController {
 
     private final OrderService orderService;
 
-    @GetMapping("/{orderId}")
-    public OrderDetailsResponse orderDetails(@PathVariable String orderId){
-        return orderService.getInternalOrderDetails(orderId);
+    @GetMapping("/{userId}/{orderId}")
+    public OrderDetailsResponse orderDetails(
+            @PathVariable String userId,
+            @PathVariable String orderId
+    ){
+        return orderService.getInternalOrderDetails(userId, orderId);
     }
 }

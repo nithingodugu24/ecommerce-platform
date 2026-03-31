@@ -78,6 +78,16 @@ spring:
                 name: paymentService
                 fallbackUri: forward:/fallback/payment
 
+        - id: cart-service
+          uri: lb://CART-SERVICE
+          predicates:
+            - Path=/cart/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: cartService
+                fallbackUri: forward:/fallback/cart
+
   reactor:
     context-propagation: auto
 security:
@@ -99,3 +109,84 @@ management:
     tracing:
       endpoint: http://${JAEGER_SERVICE_URL}/v1/traces
 
+
+resilience4j:
+
+  circuitbreaker:
+    instances:
+
+      authService:
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 15s
+
+      productService:
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 15s
+
+      adminProductService:
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 15s
+
+      orderService:
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 15s
+
+      inventoryService:
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 15s
+
+      adminInventoryService:
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 15s
+
+      paymentService:
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 15s
+
+      cartService:
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 15s
+
+
+  timelimiter:
+    instances:
+
+      authService:
+        timeoutDuration: 5s
+
+      productService:
+        timeoutDuration: 5s
+
+      adminProductService:
+        timeoutDuration: 5s
+
+      orderService:
+        timeoutDuration: 5s
+
+      inventoryService:
+        timeoutDuration: 5s
+
+      adminInventoryService:
+        timeoutDuration: 5s
+
+      paymentService:
+        timeoutDuration: 5s
+
+      cartService:
+        timeoutDuration: 5s
